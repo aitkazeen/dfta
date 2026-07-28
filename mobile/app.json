@@ -2,9 +2,10 @@
   "expo": {
     "name": "dfta",
     "slug": "dfta",
+    "scheme": "dfta",
     "version": "1.0.0",
     "orientation": "portrait",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true
@@ -21,7 +22,9 @@
             "usesCleartextTraffic": true
           }
         }
-      ]
+      ],
+      "expo-router",
+      "expo-font"
     ]
   }
 }
