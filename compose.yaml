@@ -1,0 +1,43 @@
+# Базовая конфигурация — то, как проект работает "по-боевому".
+# Локальные удобства (hot reload) лежат в compose.override.yaml,
+# который Docker подхватывает автоматически.
+
+services:
+  api:
+    build: ./server
+    ports:
+      - "3000:3000"
+    environment:
+      # Хост базы — "db", то есть имя сервиса ниже.
+      # Внутри сети Compose сервисы находят друг друга по имени.
+      # Написать здесь localhost нельзя: для контейнера api
+      # localhost — это он сам, а не Postgres.
+      DATABASE_URL: postgres://app:secret@db:5432/app
+      PORT: 3000
+    depends_on:
+      db:
+        # Ждём, пока healthcheck базы позеленеет.
+        # Без этого api стартует раньше готовности Postgres и падает.
+        condition: service_healthy
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: app
+    ports:
+      # Проброс наружу нужен только чтобы подключаться с хоста
+      # (psql, DBeaver, TablePlus). Приложению он не требуется.
+      - "5432:5432"
+    volumes:
+      # Именованный том — данные переживают пересоздание контейнера.
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app -d app"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  pgdata:

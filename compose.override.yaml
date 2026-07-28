@@ -1,0 +1,22 @@
+# Локальная разработка. Этот файл Compose подхватывает сам,
+# накладывая поверх compose.yaml. В продакшене его просто не будет.
+
+services:
+  api:
+    build:
+      context: ./server
+      # Останавливаемся на первой стадии Dockerfile — там есть
+      # tsx, typescript и остальные dev-зависимости.
+      target: build
+    # db push синхронизирует таблицы со schema.prisma без файлов миграций.
+    # Удобно, пока схема ещё пляшет. Когда устаканится — migrate deploy.
+    command: sh -c "npx prisma db push && npm run dev"
+    volumes:
+      # Код монтируем с хоста, чтобы правки подхватывались без пересборки.
+      - ./server/src:/app/src
+      - ./server/prisma:/app/prisma
+      # А node_modules оставляем контейнерные: пакеты внутри собраны
+      # под Linux, и папка с твоего macOS/Windows их сломает.
+      - /app/node_modules
+    environment:
+      NODE_ENV: development
