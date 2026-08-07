@@ -128,6 +128,33 @@ export function BankIcon({ color, size = 14 }: IconProps) {
   )
 }
 
+/** Линейная иконка «мировой фон» (глобус) для DriverChip / DriverCard. */
+export function GlobeIcon({ color, size = 14 }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 14 14">
+      <Circle cx={7} cy={7} r={5.5} fill="none" stroke={color} strokeWidth={1.3} />
+      <Path
+        d="M1.5 7h11M7 1.5c1.8 1.5 2.8 3.5 2.8 5.5S8.8 12.5 7 14M7 1.5c-1.8 1.5-2.8 3.5-2.8 5.5S5.2 12.5 7 14"
+        stroke={color}
+        strokeWidth={1.3}
+        fill="none"
+        strokeLinecap="round"
+      />
+    </Svg>
+  )
+}
+
+/** Значок «ⓘ» — раскрыть объяснение уверенности на 4.4. */
+export function InfoIcon({ color, size = 13 }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 13 13">
+      <Circle cx={6.5} cy={6.5} r={5.5} fill="none" stroke={color} strokeWidth={1.2} />
+      <Circle cx={6.5} cy={3.9} r={0.75} fill={color} stroke="none" />
+      <Path d="M6.5 6v3.4" stroke={color} strokeWidth={1.2} strokeLinecap="round" />
+    </Svg>
+  )
+}
+
 /** Шестерёнка настроек в шапке watchlist. Пути — из макета. */
 export function GearIcon({ color, size = 17 }: IconProps) {
   return (

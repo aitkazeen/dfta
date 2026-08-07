@@ -111,9 +111,7 @@ export default function PairScreen() {
           <ForecastCard
             forecast={snap.forecast}
             symbol={snap.symbol}
-            onPressDetails={() => {
-              /* TODO: экран 4.4 — полный прогноз */
-            }}
+            onPressDetails={() => router.push(`/pairs/${snap.id}/forecast`)}
           />
         </View>
 

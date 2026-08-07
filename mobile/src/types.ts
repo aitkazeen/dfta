@@ -25,11 +25,52 @@ export type Indicator = {
 }
 
 /** Категория драйвера прогноза → определяет иконку чипа. */
-export type DriverCategory = 'technical' | 'news' | 'regulator'
+export type DriverCategory = 'technical' | 'news' | 'regulator' | 'global'
 
 export type Driver = {
   category: DriverCategory
   text: string // "Техника: цена выше EMA50"
+}
+
+/** Развёрнутый драйвер прогноза для экрана 4.4 — то же деление по категориям,
+ *  что и у компактного Driver, но с заголовком, объяснением влияния и источником. */
+export type FullForecastDriver = {
+  category: DriverCategory
+  what: string // "НБ РК повысил базовую ставку до 15.75%"
+  impact: string // "Более высокая ставка обычно поддерживает нацвалюту..."
+  source: string // "НБ РК, пресс-релиз"
+}
+
+/** Горизонт полного прогноза (4.4). Пока переключатель визуальный —
+ *  как таймфрейм на 4.3, данные под него не перезапрашиваются (см. TODO в экране). */
+export type ForecastHorizon = '24ч' | '7д'
+
+/** Ряды «предсказано vs. факт» за 30 дней для графика точности на 4.4. */
+export type AccuracyTrend = {
+  predicted: number[]
+  actual: number[]
+}
+
+/**
+ * Полный прогноз для экрана 4.4 — детализация ForecastCard с 4.3:
+ * объяснение уверенности, текст от LLM, развёрнутые драйверы с источниками,
+ * честная статистика с графиком предсказано/факт (правило 5 и 6 CLAUDE.md).
+ */
+export type FullForecast = {
+  pairId: string // "USD-KZT"
+  ticker: string // "USD/KZT"
+  direction: Direction
+  directionLabel: string // "Рост"
+  targetLow: number
+  targetHigh: number
+  symbol: string
+  currentRate: number
+  confidence: number // 0..100
+  confidenceExplanation: string
+  aiExplanation: string // текст от LLM по уже посчитанным числам (правило 3)
+  drivers: FullForecastDriver[]
+  accuracy: { total: number; windowDays: number; hitRatePct: number }
+  trend: AccuracyTrend
 }
 
 export type NewsArticle = {

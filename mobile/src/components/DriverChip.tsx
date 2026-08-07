@@ -1,7 +1,7 @@
 import { Pressable, StyleSheet } from 'react-native'
 import { radius, useTheme } from '../theme'
 import { Text } from './Text'
-import { BankIcon, NewsIcon, TrendIcon } from './icons'
+import { BankIcon, GlobeIcon, NewsIcon, TrendIcon } from './icons'
 import type { DriverCategory } from '../types'
 
 type Props = {
@@ -15,6 +15,7 @@ const ICON = {
   technical: TrendIcon,
   news: NewsIcon,
   regulator: BankIcon,
+  global: GlobeIcon,
 } as const
 
 /**
