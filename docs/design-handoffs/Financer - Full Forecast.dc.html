@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  body { margin: 0; background: #05070a; }
+  * { font-family: 'Inter', -apple-system, system-ui, sans-serif; }
+  .fc-scroll::-webkit-scrollbar { display: none; }
+</style>
+</helmet>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" hint-size="393,852">
+<div style="width:393px;height:100%;background:{{ c.base }};color:{{ c.textPrimary }};display:flex;flex-direction:column;box-sizing:border-box;">
+
+  <div style="position:sticky;top:0;z-index:5;background:{{ c.base }};padding:52px 16px 12px;border-bottom:1px solid {{ c.border }};">
+    <div style="display:flex;align-items:center;justify-content:space-between;">
+      <button style="width:36px;height:36px;border-radius:999px;background:{{ c.surfaceRaised }};border:none;display:flex;align-items:center;justify-content:center;">
+        <svg width="10" height="16" viewBox="0 0 10 16"><path d="M8.5 1L1.5 8l7 7" stroke="{{ c.textPrimary }}" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+      </button>
+      <div style="font-size:17px;font-weight:600;">Прогноз · USD/KZT</div>
+      <button style="width:36px;height:36px;border-radius:999px;background:{{ c.surfaceRaised }};border:none;display:flex;align-items:center;justify-content:center;">
+        <svg width="15" height="16" viewBox="0 0 15 16"><path d="M7.5 1.2c-2.5 0-4.4 2-4.4 4.6v2.9c0 .9-.3 1.7-.9 2.4l-.6.7c-.5.6-.1 1.5.7 1.5h10.4c.8 0 1.2-.9.7-1.5l-.6-.7c-.6-.7-.9-1.5-.9-2.4V5.8c0-2.6-1.9-4.6-4.4-4.6z" fill="none" stroke="{{ c.textSecondary }}" stroke-width="1.4" stroke-linejoin="round"></path><path d="M5.7 15c.3.6 1 1 1.8 1s1.5-.4 1.8-1" fill="none" stroke="{{ c.textSecondary }}" stroke-width="1.4" stroke-linecap="round"></path></svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="fc-scroll" style="flex:1;overflow-y:auto;">
+
+    <div style="padding:20px 16px 0;">
+      <div style="display:flex;gap:6px;margin-bottom:16px;">
+        <sc-for list="{{ horizons }}" as="h" hint-placeholder-count="2">
+          <button onClick="{{ () => setHorizon(h) }}" style="{{ horizonStyle(h) }}">{{ h }}</button>
+        </sc-for>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div style="display:flex;align-items:center;gap:5px;background:{{ c.upBg }};color:{{ c.up }};padding:5px 12px;border-radius:999px;font-size:14px;font-weight:700;">↑ Рост</div>
+        <div style="font-size:13px;font-weight:500;color:{{ c.textTertiary }};">на горизонте {{ horizonLabel }}</div>
+      </div>
+      <div style="margin-top:10px;font-size:36px;font-weight:600;font-variant-numeric:tabular-nums;">512–515&nbsp;₸</div>
+      <div style="margin-top:2px;font-size:13px;font-weight:500;color:{{ c.textSecondary }};">Текущая цена: 511.40 ₸</div>
+    </div>
+
+    <div style="padding:20px 16px 0;">
+      <button onClick="{{ () => toggle('confInfo') }}" style="width:100%;background:{{ c.surface }};border:1px solid {{ c.border }};border-radius:16px;padding:16px;text-align:left;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div style="font-size:15px;font-weight:600;">Умеренная уверенность</div>
+          <div style="font-size:13px;font-weight:500;color:{{ c.textSecondary }};font-variant-numeric:tabular-nums;">60 · ⓘ</div>
+        </div>
+        <div style="margin-top:10px;height:6px;border-radius:3px;background:{{ c.border }};position:relative;">
+          <div style="position:absolute;left:50%;top:-3px;width:1px;height:12px;background:{{ c.textTertiary }};"></div>
+          <div style="width:60%;height:6px;border-radius:3px;background:{{ c.accent }};"></div>
+        </div>
+        <sc-if value="{{ open.confInfo }}">
+          <div style="margin-top:12px;padding-top:12px;border-top:1px solid {{ c.border }};font-size:14px;line-height:20px;color:{{ c.textSecondary }};">Уверенность — это согласованность технических индикаторов, новостного фона и исторической точности модели по этой паре. Не вероятность в строгом статистическом смысле, а сводный балл от 0 до 100.</div>
+        </sc-if>
+      </button>
+    </div>
+
+    <div style="padding:16px 16px 0;">
+      <div style="background:{{ c.surface }};border:1px solid {{ c.border }};border-radius:16px;padding:16px;">
+        <div style="font-size:15px;line-height:22px;color:{{ c.textPrimary }};">Тренд последних дней поддержан решением НБ РК по ставке и слабостью доллара после риторики ФРС. Технические индикаторы остаются на стороне покупателей, признаков резкого разворота не зафиксировано.</div>
+        <div style="margin-top:8px;font-size:11px;font-weight:600;letter-spacing:0.3px;color:{{ c.textTertiary }};">✦ СГЕНЕРИРОВАНО ИИ</div>
+      </div>
+    </div>
+
+    <div style="padding:20px 16px 8px;">
+      <div style="font-size:13px;font-weight:600;color:{{ c.textTertiary }};letter-spacing:0.3px;">ДРАЙВЕРЫ ПРОГНОЗА</div>
+    </div>
+    <div style="padding:0 16px;display:flex;flex-direction:column;gap:10px;">
+      <sc-for list="{{ drivers }}" as="d" hint-placeholder-count="3">
+        <div style="background:{{ c.surface }};border:1px solid {{ c.border }};border-radius:16px;padding:16px;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div style="width:28px;height:28px;border-radius:8px;background:{{ c.surfaceRaised }};display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;">{{ d.icon }}</div>
+            <div style="font-size:15px;font-weight:600;">{{ d.what }}</div>
+          </div>
+          <div style="margin-top:8px;font-size:14px;line-height:20px;color:{{ c.textSecondary }};">{{ d.impact }}</div>
+          <div style="margin-top:10px;font-size:13px;font-weight:600;color:{{ c.accent }};">{{ d.source }} →</div>
+        </div>
+      </sc-for>
+    </div>
+
+    <div style="padding:24px 16px 8px;">
+      <div style="font-size:13px;font-weight:600;color:{{ c.textTertiary }};letter-spacing:0.3px;">ЧЕСТНАЯ СТАТИСТИКА</div>
+    </div>
+    <div style="padding:0 16px 16px;">
+      <div style="background:{{ c.surface }};border:1px solid {{ c.border }};border-radius:16px;padding:16px;">
+        <div style="display:flex;gap:24px;">
+          <div>
+            <div style="font-size:26px;font-weight:600;font-variant-numeric:tabular-nums;">148</div>
+            <div style="font-size:12px;font-weight:500;color:{{ c.textTertiary }};">прогнозов за 90 дн.</div>
+          </div>
+          <div>
+            <div style="font-size:26px;font-weight:600;font-variant-numeric:tabular-nums;color:{{ c.up }};">61%</div>
+            <div style="font-size:12px;font-weight:500;color:{{ c.textTertiary }};">сбылось</div>
+          </div>
+        </div>
+
+        <div style="margin-top:16px;">
+          <div style="font-size:13px;font-weight:500;color:{{ c.textSecondary }};margin-bottom:8px;">Предсказано vs. факт, 30 дней</div>
+          <svg width="100%" height="120" viewBox="0 0 340 120" style="display:block;">
+            <polyline points="{{ predictedLine }}" fill="none" stroke="{{ c.accent }}" stroke-width="1.6" stroke-dasharray="4 3"></polyline>
+            <polyline points="{{ actualLine }}" fill="none" stroke="{{ c.textPrimary }}" stroke-width="1.6"></polyline>
+          </svg>
+          <div style="display:flex;gap:16px;margin-top:6px;">
+            <div style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:500;color:{{ c.textSecondary }};"><div style="width:12px;height:0;border-top:1.6px dashed {{ c.accent }};"></div>Прогноз</div>
+            <div style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:500;color:{{ c.textSecondary }};"><div style="width:12px;height:1.6px;background:{{ c.textPrimary }};"></div>Факт</div>
+          </div>
+        </div>
+
+        <div style="margin-top:14px;padding-top:12px;border-top:1px solid {{ c.border }};font-size:13px;line-height:19px;color:{{ c.textSecondary }};">Точность рассчитывается по совпадению направления движения, а не точной цены. Публикуем всегда, даже когда результат ниже среднего.</div>
+      </div>
+    </div>
+
+    <div style="padding:0 16px 32px;text-align:center;font-size:11px;line-height:15px;letter-spacing:0.3px;color:{{ c.textTertiary }};">Информационный сервис. Не является индивидуальной инвестиционной рекомендацией. Прошлые результаты не гарантируют будущих.</div>
+
+  </div>
+</div>
+</x-import>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:393,&quot;height&quot;:852}}">
+class Component extends DCLogic {
+  state = { horizon: '24ч', open: { confInfo: false } };
+
+  colors = {
+    base: '#0B0F14', surface: '#141A22', surfaceRaised: '#1C242E', border: '#26303B',
+    textPrimary: '#EDF1F5', textSecondary: '#94A3B2', textTertiary: '#5D6B7A',
+    accent: '#4C8DFF', up: '#3DD68C', down: '#F26D6D',
+    upBg: 'rgba(61,214,140,0.12)',
+  };
+
+  predicted = [508,508.5,509,509.5,510,510.4,510.8,511.2,511.6,512,512.3];
+  actual = [508,508.3,509.4,509.1,510.3,510.9,510.5,511.5,511.3,512.2,511.9];
+
+  toggle(key) { this.setState(s => ({ open: { ...s.open, [key]: !s.open[key] } })); }
+
+  renderVals() {
+    const c = this.colors;
+    const horizons = ['24ч', '7д'];
+    const horizonStyle = h => {
+      const active = h === this.state.horizon;
+      return `flex:1;padding:9px 0;border-radius:10px;font-size:14px;font-weight:600;border:1px solid ${active ? c.accent : c.border};background:${active ? c.accent : 'transparent'};color:${active ? '#fff' : c.textSecondary};`;
+    };
+
+    const toLine = arr => {
+      const min = Math.min(...arr, ...this.actual), max = Math.max(...arr, ...this.actual);
+      const range = max - min || 1;
+      return arr.map((v, i) => {
+        const x = (i / (arr.length - 1)) * 340;
+        const y = 110 - ((v - min) / range) * 100;
+        return `${x.toFixed(1)},${y.toFixed(1)}`;
+      }).join(' ');
+    };
+
+    return {
+      c,
+      horizons,
+      horizon: this.state.horizon,
+      horizonLabel: this.state.horizon === '24ч' ? '24 часа' : '7 дней',
+      setHorizon: h => this.setState({ horizon: h }),
+      horizonStyle,
+      open: this.state.open,
+      toggle: key => this.toggle(key),
+      drivers: [
+        { icon: '🏦', what: 'НБ РК повысил базовую ставку до 15.75%', impact: 'Более высокая ставка обычно поддерживает нацвалюту в краткосрочной перспективе — приток capital на депозиты в тенге.', source: 'НБ РК, пресс-релиз' },
+        { icon: '📈', what: 'Цена выше EMA50, бычий крест MACD', impact: 'Технические индикаторы указывают на сохранение восходящего импульса в ближайшие дни.', source: 'Технический анализ' },
+        { icon: '🌐', what: 'ФРС сохранила ставку, риторика жёстче ожиданий', impact: 'Более жёсткая риторика ФРС временно ослабляет доллар на глобальных площадках.', source: 'Reuters' },
+      ],
+      predictedLine: toLine(this.predicted),
+      actualLine: toLine(this.actual),
+    };
+  }
+}
+</script>
+</body>
+</html>

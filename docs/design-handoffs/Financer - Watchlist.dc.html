@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  body { margin: 0; background: #05070a; }
+  * { font-family: 'Inter', -apple-system, system-ui, sans-serif; }
+  .fc-scroll::-webkit-scrollbar { display: none; }
+</style>
+</helmet>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" hint-size="393,852">
+<div style="width:393px;height:100%;background:{{ c.base }};color:{{ c.textPrimary }};display:flex;flex-direction:column;box-sizing:border-box;">
+
+  <div style="position:sticky;top:0;z-index:5;background:{{ c.base }};padding:52px 16px 12px;border-bottom:1px solid {{ c.border }};">
+    <div style="display:flex;align-items:center;justify-content:space-between;">
+      <div style="font-size:11px;font-weight:500;letter-spacing:0.3px;color:{{ c.textTertiary }};">Обновлено сегодня в 11:32</div>
+      <button style="width:36px;height:36px;border-radius:999px;background:{{ c.surfaceRaised }};border:none;display:flex;align-items:center;justify-content:center;">
+        <svg width="17" height="17" viewBox="0 0 17 17"><circle cx="8.5" cy="8.5" r="2.4" fill="none" stroke="{{ c.textSecondary }}" stroke-width="1.4"></circle><path d="M8.5 1.2v2M8.5 13.8v2M1.2 8.5h2M13.8 8.5h2M3.4 3.4l1.4 1.4M12.2 12.2l1.4 1.4M13.6 3.4l-1.4 1.4M4.8 12.2l-1.4 1.4" stroke="{{ c.textSecondary }}" stroke-width="1.4" stroke-linecap="round"></path></svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="fc-scroll" style="flex:1;overflow-y:auto;">
+
+    <div style="padding:16px 16px 0;">
+      <div style="font-size:13px;font-weight:600;color:{{ c.textTertiary }};letter-spacing:0.3px;margin-bottom:8px;">СЕГОДНЯ</div>
+      <div style="background:{{ c.surface }};border:1px solid {{ c.border }};border-radius:16px;padding:16px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <div style="font-size:15px;font-weight:600;color:{{ c.textSecondary }};">USD/KZT</div>
+          <div style="display:flex;align-items:center;gap:4px;background:{{ c.upBg }};color:{{ c.up }};padding:4px 10px;border-radius:8px;font-size:13px;font-weight:600;">↑ Рост</div>
+        </div>
+        <div style="margin-top:8px;font-size:26px;font-weight:600;font-variant-numeric:tabular-nums;">512–515&nbsp;₸</div>
+        <div style="margin-top:8px;font-size:15px;line-height:21px;color:{{ c.textSecondary }};">Тренд поддержан решением НБ РК по ставке — сигнал умеренный.</div>
+      </div>
+    </div>
+
+    <div style="padding:20px 16px 8px;display:flex;align-items:center;justify-content:space-between;">
+      <div style="font-size:13px;font-weight:600;color:{{ c.textTertiary }};letter-spacing:0.3px;">ВАШИ ПАРЫ</div>
+    </div>
+
+    <div style="padding:0 16px;">
+      <div style="background:{{ c.surface }};border:1px solid {{ c.border }};border-radius:16px;overflow:hidden;">
+        <sc-for list="{{ pairs }}" as="p" hint-placeholder-count="5">
+          <div style="{{ p.rowStyle }}">
+            <div style="width:32px;height:32px;border-radius:999px;background:{{ c.surfaceRaised }};display:flex;align-items:center;justify-content:center;font-size:14px;">{{ p.flags }}</div>
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:15px;font-weight:600;">{{ p.ticker }}</div>
+              <div style="font-size:13px;font-weight:500;color:{{ p.deltaColor }};font-variant-numeric:tabular-nums;">{{ p.deltaLabel }}</div>
+            </div>
+            <svg width="56" height="24" viewBox="0 0 56 24" style="flex-shrink:0;">
+              <polyline points="{{ p.sparkline }}" fill="none" stroke="{{ p.deltaColor }}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></polyline>
+            </svg>
+            <div style="text-align:right;flex-shrink:0;min-width:64px;">
+              <div style="font-size:15px;font-weight:600;font-variant-numeric:tabular-nums;">{{ p.price }}</div>
+              <div style="display:inline-flex;align-items:center;gap:2px;margin-top:2px;background:{{ p.badgeBg }};color:{{ p.deltaColor }};padding:2px 7px;border-radius:6px;font-size:11px;font-weight:600;">{{ p.badgeArrow }} {{ p.badgePct }}</div>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+
+    <div style="padding:12px 16px 24px;">
+      <button style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;padding:14px;border-radius:12px;background:{{ c.surfaceRaised }};border:1px dashed {{ c.border }};color:{{ c.textSecondary }};font-size:15px;font-weight:600;">
+        <span style="font-size:17px;line-height:1;">+</span> Добавить пару
+      </button>
+    </div>
+
+  </div>
+
+  <div style="display:flex;align-items:stretch;border-top:1px solid {{ c.border }};background:{{ c.base }};padding:8px 8px 24px;">
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px 0;color:{{ tabColor.overview }};">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="{{ tabColor.overview }}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="12" width="4" height="8" rx="1"></rect><rect x="10" y="7" width="4" height="13" rx="1"></rect><rect x="17" y="3" width="4" height="17" rx="1"></rect></svg>
+      <div style="font-size:11px;font-weight:600;">Обзор</div>
+    </div>
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px 0;color:{{ tabColor.news }};">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="{{ tabColor.news }}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="14" height="16" rx="1.5"></rect><path d="M17 8h4v10a2 2 0 0 1-2 2h-2"></path><path d="M6.5 8h7M6.5 11.5h7M6.5 15h4"></path></svg>
+      <div style="font-size:11px;font-weight:600;">Новости</div>
+    </div>
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px 0;color:{{ tabColor.alerts }};">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="{{ tabColor.alerts }}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 10a6 6 0 1 1 12 0c0 4 1.5 5.5 1.5 5.5H4.5S6 14 6 10Z"></path><path d="M10 19a2 2 0 0 0 4 0"></path></svg>
+      <div style="font-size:11px;font-weight:600;">Алерты</div>
+    </div>
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px 0;color:{{ tabColor.more }};">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="{{ tabColor.more }}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><circle cx="8.2" cy="12" r="1.15" fill="{{ tabColor.more }}" stroke="none"></circle><circle cx="12" cy="12" r="1.15" fill="{{ tabColor.more }}" stroke="none"></circle><circle cx="15.8" cy="12" r="1.15" fill="{{ tabColor.more }}" stroke="none"></circle></svg>
+      <div style="font-size:11px;font-weight:600;">Ещё</div>
+    </div>
+  </div>
+
+</div>
+</x-import>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:393,&quot;height&quot;:852}}">
+class Component extends DCLogic {
+  colors = {
+    base: '#0B0F14', surface: '#141A22', surfaceRaised: '#1C242E', border: '#26303B',
+    textPrimary: '#EDF1F5', textSecondary: '#94A3B2', textTertiary: '#5D6B7A',
+    accent: '#4C8DFF', up: '#3DD68C', down: '#F26D6D', flat: '#94A3B2',
+    upBg: 'rgba(61,214,140,0.12)', downBg: 'rgba(242,109,109,0.12)', flatBg: 'rgba(148,163,178,0.12)',
+  };
+
+  raw = [
+    { flags: '🇺🇸🇰🇿', ticker: 'USD/KZT', price: '511.40 ₸', dir: 'up', pct: '0.6%', spark: [0,2,1,4,3,6,8] },
+    { flags: '🇪🇺🇰🇿', ticker: 'EUR/KZT', price: '556.80 ₸', dir: 'down', pct: '0.3%', spark: [8,6,7,4,5,2,1] },
+    { flags: '🇷🇺🇰🇿', ticker: 'RUB/KZT', price: '6.12 ₸', dir: 'flat', pct: '0.1%', spark: [3,4,3,4,3,4,3] },
+    { flags: '🇬🇧🇰🇿', ticker: 'GBP/KZT', price: '648.20 ₸', dir: 'up', pct: '0.9%', spark: [1,3,2,5,6,7,9] },
+    { flags: '🇨🇳🇰🇿', ticker: 'CNY/KZT', price: '70.85 ₸', dir: 'down', pct: '0.2%', spark: [7,6,6,5,4,4,3] },
+  ];
+
+  renderVals() {
+    const c = this.colors;
+    const dirColor = { up: c.up, down: c.down, flat: c.flat };
+    const dirBg = { up: c.upBg, down: c.downBg, flat: c.flatBg };
+    const dirArrow = { up: '↑', down: '↓', flat: '→' };
+    const dirSign = { up: '+', down: '−', flat: '' };
+
+    const pairs = this.raw.map((p, i) => {
+      const min = Math.min(...p.spark), max = Math.max(...p.spark);
+      const range = max - min || 1;
+      const pts = p.spark.map((v, idx) => {
+        const x = (idx / (p.spark.length - 1)) * 56;
+        const y = 22 - ((v - min) / range) * 20;
+        return `${x.toFixed(1)},${y.toFixed(1)}`;
+      }).join(' ');
+      return {
+        flags: p.flags, ticker: p.ticker, price: p.price,
+        deltaLabel: `24ч: ${dirSign[p.dir]}${p.pct}`,
+        deltaColor: dirColor[p.dir],
+        badgeBg: dirBg[p.dir], badgeArrow: dirArrow[p.dir], badgePct: p.pct,
+        sparkline: pts,
+        rowStyle: `display:flex;align-items:center;gap:12px;padding:0 16px;height:68px;box-sizing:border-box;${i < this.raw.length - 1 ? `border-bottom:1px solid ${c.border};` : ''}`,
+      };
+    });
+
+    const tabColor = {
+      overview: c.textPrimary, news: c.textTertiary, alerts: c.textTertiary, more: c.textTertiary,
+    };
+
+    return { c, pairs, tabColor };
+  }
+}
+</script>
+</body>
+</html>
