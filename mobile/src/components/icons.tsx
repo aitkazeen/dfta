@@ -1,4 +1,4 @@
-import Svg, { Path } from 'react-native-svg'
+import Svg, { Circle, Path, Rect } from 'react-native-svg'
 
 type IconProps = {
   color: string
@@ -124,6 +124,67 @@ export function BankIcon({ color, size = 14 }: IconProps) {
         strokeWidth={1.3}
         strokeLinecap="round"
       />
+    </Svg>
+  )
+}
+
+/** Шестерёнка настроек в шапке watchlist. Пути — из макета. */
+export function GearIcon({ color, size = 17 }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 17 17">
+      <Circle cx={8.5} cy={8.5} r={2.4} fill="none" stroke={color} strokeWidth={1.4} />
+      <Path
+        d="M8.5 1.2v2M8.5 13.8v2M1.2 8.5h2M13.8 8.5h2M3.4 3.4l1.4 1.4M12.2 12.2l1.4 1.4M13.6 3.4l-1.4 1.4M4.8 12.2l-1.4 1.4"
+        stroke={color}
+        strokeWidth={1.4}
+        strokeLinecap="round"
+      />
+    </Svg>
+  )
+}
+
+// --- Иконки нижнего таб-бара (24×24, stroke 1.8) ---
+
+/** «Обзор» — столбики. */
+export function OverviewTabIcon({ color, size = 22 }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+      <Rect x={3} y={12} width={4} height={8} rx={1} />
+      <Rect x={10} y={7} width={4} height={13} rx={1} />
+      <Rect x={17} y={3} width={4} height={17} rx={1} />
+    </Svg>
+  )
+}
+
+/** «Новости» — газета. */
+export function NewsTabIcon({ color, size = 22 }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+      <Rect x={3} y={4} width={14} height={16} rx={1.5} />
+      <Path d="M17 8h4v10a2 2 0 0 1-2 2h-2" />
+      <Path d="M6.5 8h7M6.5 11.5h7M6.5 15h4" />
+    </Svg>
+  )
+}
+
+/** «Алерты» — колокольчик. */
+export function AlertsTabIcon({ color, size = 22 }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+      <Path d="M6 10a6 6 0 1 1 12 0c0 4 1.5 5.5 1.5 5.5H4.5S6 14 6 10Z" />
+      <Path d="M10 19a2 2 0 0 0 4 0" />
+    </Svg>
+  )
+}
+
+/** «Ещё» — круг с тремя точками. */
+export function MoreTabIcon({ color, size = 22 }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+      <Circle cx={12} cy={12} r={9} />
+      <Circle cx={8.2} cy={12} r={1.15} fill={color} stroke="none" />
+      <Circle cx={12} cy={12} r={1.15} fill={color} stroke="none" />
+      <Circle cx={15.8} cy={12} r={1.15} fill={color} stroke="none" />
     </Svg>
   )
 }

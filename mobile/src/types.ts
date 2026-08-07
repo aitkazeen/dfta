@@ -82,3 +82,28 @@ export type PairSnapshot = {
 }
 
 export type Timeframe = '1Ч' | '1Д' | '1Н' | '1М' | '1Г'
+
+/** Строка watchlist (главный экран 4.2, §3.4 PairRow). */
+export type WatchlistPair = {
+  id: string // "USD-KZT" — роут /pairs/[id]
+  flags: string // "🇺🇸🇰🇿"
+  base: string // "USD"
+  quote: string // "KZT"
+  rate: number // 511.4
+  symbol: string // "₸"
+  direction: Direction
+  deltaPct: number // 0.6 за 24ч (знак берём из direction, не из значения)
+  spark: number[] // ~7 точек микро-спарклайна
+}
+
+/** Верхняя карточка «Сегодня» на watchlist — сокращённый прогноз по паре №1. */
+export type TodaySummary = {
+  pairId: string
+  ticker: string // "USD/KZT"
+  direction: Direction
+  directionLabel: string // "Рост"
+  targetLow: number
+  targetHigh: number
+  symbol: string
+  summary: string // одна строка объяснения
+}
