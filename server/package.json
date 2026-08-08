@@ -9,8 +9,13 @@
     "start": "node dist/main.js",
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
+    "db:seed": "tsx --env-file-if-exists=.env prisma/seed.ts",
     "fx:compare": "tsx --env-file-if-exists=.env scripts/compare-fx-providers.ts",
+    "fx:export-dataset": "tsx --env-file-if-exists=.env scripts/export-nbk-dataset.ts",
     "marketaux:test": "tsx --env-file-if-exists=.env scripts/marketaux-test.ts"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.2.1",

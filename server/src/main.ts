@@ -1,5 +1,7 @@
 import Fastify from 'fastify'
 import { PrismaClient } from '@prisma/client'
+import { createQuoteProvider } from './modules/market/quote-provider.factory.js'
+import { marketRoutes } from './modules/market/routes.js'
 
 const db = new PrismaClient()
 const app = Fastify({ logger: true })
@@ -9,13 +11,8 @@ app.get('/health', async () => {
   return { ok: true, time: new Date().toISOString() }
 })
 
-// Единственный демонстрационный эндпоинт: считает записи в БД
-// и возвращает их. Дальше пишешь свои роуты рядом.
-app.get('/ping', async () => {
-  const count = await db.ping.count()
-  const created = await db.ping.create({ data: {} })
-  return { message: 'pong', previousPings: count, id: created.id }
-})
+const quoteProvider = createQuoteProvider(process.env, app.log)
+await app.register(marketRoutes({ db, quoteProvider }))
 
 const port = Number(process.env.PORT ?? 3000)
 

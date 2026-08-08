@@ -7,9 +7,50 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Модель-заглушка, чтобы было что мигрировать и что показать.
-// Удаляй её и описывай свои сущности.
-model Ping {
-  id        Int      @id @default(autoincrement())
-  createdAt DateTime @default(now())
+model Currency {
+  code     String @id @db.Char(3) // "USD" | "EUR" | "RUB" | "KZT"
+  name     String
+  symbol   String // "$", "€", "₽", "₸"
+  isActive Boolean @default(true) @map("is_active")
+
+  basePairs  CurrencyPair[] @relation("BaseCurrency")
+  quotePairs CurrencyPair[] @relation("QuoteCurrency")
+
+  @@map("currency")
+}
+
+// id — человекочитаемый слаг ("USD-KZT"), не число: мобильный клиент уже
+// использует именно эту строку как id пары (mobile/src/types.ts), а роут
+// GET /v1/pairs/:id/quote (roadmap §6) резолвится без слоя трансляции.
+model CurrencyPair {
+  id          String  @id @db.VarChar(15) // "USD-KZT"
+  baseCode    String  @map("base_code") @db.Char(3)
+  quoteCode   String  @map("quote_code") @db.Char(3)
+  displayName String  @map("display_name") // "USD/KZT"
+  isActive    Boolean @default(true) @map("is_active")
+  priority    Int     @default(0)
+
+  base    Currency @relation("BaseCurrency", fields: [baseCode], references: [code])
+  quote   Currency @relation("QuoteCurrency", fields: [quoteCode], references: [code])
+  candles Candle[]
+
+  @@unique([baseCode, quoteCode])
+  @@map("currency_pair")
+}
+
+model Candle {
+  id        BigInt   @id @default(autoincrement())
+  pairId    String   @map("pair_id")
+  ts        DateTime
+  timeframe String // "1d"
+  open      Decimal  @db.Decimal(18, 6)
+  high      Decimal  @db.Decimal(18, 6)
+  low       Decimal  @db.Decimal(18, 6)
+  close     Decimal  @db.Decimal(18, 6)
+  source    String // "nbk" | "forexrateapi"
+
+  pair CurrencyPair @relation(fields: [pairId], references: [id])
+
+  @@unique([pairId, timeframe, ts])
+  @@map("candle")
 }
