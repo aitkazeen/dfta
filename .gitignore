@@ -1,6 +1,7 @@
 node_modules/
 dist/
 .env
+server/data/
 .expo/
 *.log
 .DS_Store
@@ -15,3 +16,5 @@ web-build/
 *.p12
 *.key
 *.mobileprovision
+credentials.json
+credentials/

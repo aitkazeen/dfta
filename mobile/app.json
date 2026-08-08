@@ -1,17 +1,21 @@
 {
   "expo": {
-    "name": "dfta",
-    "slug": "dfta",
-    "scheme": "dfta",
+    "name": "KursWise",
+    "slug": "kurswise",
+    "scheme": "kurswise",
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "kz.qoqosyk.financer",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
-      "package": "com.example.dfta"
+      "package": "kz.qoqosyk.financer"
     },
     "plugins": [
       "expo-asset",
@@ -25,6 +29,12 @@
       ],
       "expo-router",
       "expo-font"
-    ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "e0705c69-923f-4ab5-9653-ed4221953782"
+      }
+    }
   }
 }
