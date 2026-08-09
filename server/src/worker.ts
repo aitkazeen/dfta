@@ -63,7 +63,7 @@ async function upsertDailyCandle(pairId: string, quote: Quote): Promise<void> {
   }
 
   await db.candle.update({
-    where: { id: existing.id },
+    where: { pairId_timeframe_ts: { pairId, timeframe: '1d', ts: today } },
     data: {
       high: Math.max(existing.high.toNumber(), quote.rate),
       low: Math.min(existing.low.toNumber(), quote.rate),

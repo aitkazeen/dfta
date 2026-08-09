@@ -20,9 +20,10 @@ services:
       # Останавливаемся на первой стадии Dockerfile — там есть
       # tsx, typescript и остальные dev-зависимости.
       target: build
-    # db push синхронизирует таблицы со schema.prisma без файлов миграций.
-    # Удобно, пока схема ещё пляшет. Когда устаканится — migrate deploy.
-    command: sh -c "npx prisma db push && npm run dev"
+    # migrate deploy применяет уже существующие файлы миграций (prisma/migrations/),
+    # ничего не генерирует сам — в отличие от db push, безопасен для повторных запусков
+    # и не спорит с историей миграций.
+    command: sh -c "npx prisma migrate deploy && npm run dev"
     volumes:
       # Код монтируем с хоста, чтобы правки подхватывались без пересборки.
       - ./server/src:/app/src

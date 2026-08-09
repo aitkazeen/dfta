@@ -26,7 +26,7 @@
 - **Expo, а не bare React Native** — чтобы не настраивать Xcode/Android Studio на старте  
 - **Fastify, а не NestJS** — владелец первый раз делает бэкенд, скелет уже работает. Nest даёт DI и структуру, но добавляет три абстракции поверх той, которую ещё не пощупали. Возврат к вопросу — когда роутов станет больше и появится реальная боль от ручной сборки зависимостей  
 - **Prisma, а не Drizzle** — больше документации, порог входа ниже  
-- **`prisma db push`, а не миграции** — схема ещё меняется. Переход на `prisma migrate dev` запланирован, но не сделан  
+- ~~**`prisma db push`, а не миграции**~~ — сделан переход на `prisma migrate dev`/`migrate deploy` 2026-08-09 (первая миграция `candle_hypertable_pk` заодно завела и `CREATE EXTENSION timescaledb` в историю миграций — раньше расширение было накатано вручную и не пережило бы `migrate reset`)  
 - **Двухстадийный Dockerfile** — dev-зависимости не уезжают в финальный образ  
 - **Прогноз по правилам, а не ML** — фиатные пары с управляемыми курсами (RUB, KZT) плохо предсказываются ML на малой выборке. Правила предсказуемы и отлаживаемы; ML — второй этап, за тем же интерфейсом  
 - **LLM только для текста объяснения**, не для расчёта прогноза
@@ -37,7 +37,9 @@
 
 BullMQ-воркер (`server/src/worker.ts`, отдельный контейнер `worker` в `compose.yaml`/`compose.override.yaml`) каждые 6 часов обходит активные пары через тот же `IQuoteProvider` и складывает дневные свечи в `candle` (upsert по `(pairId, timeframe, ts)` — open фиксируется первым снятием за день, high/low/close обновляются на каждом). 6 часов, а не чаще: НБ РК отдаёт один фиксинг в сутки, курс внутри дня не меняется. Проверено вживую 2026-08-09: `docker compose up --build` → воркер стартует, забирает курсы всех 3 пар от НБ РК и пишет 3 строки в `candle`.
 
-Новостной модуль, forecast-движок и экраны пока не подключены к реальным данным (мобильное приложение всё ещё на моках `mobile/src/mock/*`). Прогнозный пайплайн, превращение `candle` в hypertable и переход с `db push` на `migrate dev` — ещё впереди по этапу 1.
+`candle` теперь настоящая TimescaleDB hypertable (композитный PK `(pairId, timeframe, ts)` вместо отдельного `id`, миграция `candle_hypertable_pk`), схема перешла с `db push` на `prisma migrate dev`/`migrate deploy` — проверено вживую 2026-08-09.
+
+Новостной модуль, forecast-движок и экраны пока не подключены к реальным данным (мобильное приложение всё ещё на моках `mobile/src/mock/*`). Прогнозный пайплайн — ещё впереди по этапу 1.
 
 ## Как запускать
 
@@ -116,4 +118,4 @@ Push — единственный внешний канал (виджета не
 4. Перейти с `db push` на миграции  
 5. Навигация: `expo-router`. Запросы: `@tanstack/react-query`
 
-**Текущий этап:** 1 — фундамент. Сделано: `Currency`/`CurrencyPair`/`Candle`, `IQuoteProvider` (НБ РК + ForexRateAPI fallback), роут `/v1/pairs/:id/quote`, сид 3 пар; `db` переведён на `timescale/timescaledb:latest-pg16`, расширение включено (`CREATE EXTENSION timescaledb`, проверено вживую — 2.29.1 Community Edition); Redis поднят в `compose.yaml` и теперь используется — BullMQ-воркер (`server/src/worker.ts`, контейнер `worker`) каждые 6 часов пишет дневные свечи в `candle` через `IQuoteProvider`, проверено вживую 2026-08-09. Осталось по этапу: превращение `candle` в hypertable (нужна правка PK — сейчас `Candle.id` не включает `ts`, `create_hypertable` откажет как есть), переход `db push` → `migrate dev`, дизайн-система/навигация (мобильная часть уже во многом готова — экраны watchlist/pair/forecast/news/alerts построены на моках). *(Обновлять эту строку при переходе между этапами — она задаёт контекст, что сейчас в работе.)*  
+**Текущий этап:** 1 — фундамент. Сделано: `Currency`/`CurrencyPair`/`Candle`, `IQuoteProvider` (НБ РК + ForexRateAPI fallback), роут `/v1/pairs/:id/quote`, сид 3 пар; `db` переведён на `timescale/timescaledb:latest-pg16`; Redis поднят и используется — BullMQ-воркер (`server/src/worker.ts`, контейнер `worker`) каждые 6 часов пишет дневные свечи в `candle` через `IQuoteProvider`; `candle` — настоящая hypertable (композитный PK `(pairId, timeframe, ts)`); схема на `prisma migrate dev`/`migrate deploy`, первая миграция `candle_hypertable_pk` применена. Всё проверено вживую 2026-08-09: `docker compose up --build` поднимает api/worker/db/redis, `migrate deploy` находит и применяет миграцию без дрейфа, `timescaledb_information.hypertables` отдаёт `candle`, воркер пишет свечи, `/v1/pairs/USD-KZT/quote` отвечает. Осталось по этапу: дизайн-система/навигация (мобильная часть уже во многом готова — экраны watchlist/pair/forecast/news/alerts построены на моках), CI (линт, тесты, EAS Build). *(Обновлять эту строку при переходе между этапами — она задаёт контекст, что сейчас в работе.)*  
