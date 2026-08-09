@@ -2,6 +2,18 @@
 # накладывая поверх compose.yaml. В продакшене его просто не будет.
 
 services:
+  worker:
+    build:
+      context: ./server
+      target: build
+    command: sh -c "npx prisma generate && npx tsx watch src/worker.ts"
+    volumes:
+      - ./server/src:/app/src
+      - ./server/prisma:/app/prisma
+      - /app/node_modules
+    environment:
+      NODE_ENV: development
+
   api:
     build:
       context: ./server

@@ -19,7 +19,9 @@
   },
   "dependencies": {
     "@prisma/client": "^6.2.1",
-    "fastify": "^5.2.1"
+    "bullmq": "^6.0.9",
+    "fastify": "^5.2.1",
+    "ioredis": "^6.0.0"
   },
   "devDependencies": {
     "@types/node": "^22.10.7",

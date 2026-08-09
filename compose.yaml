@@ -52,6 +52,18 @@ services:
       timeout: 3s
       retries: 10
 
+  worker:
+    build: ./server
+    command: node dist/worker.js
+    environment:
+      DATABASE_URL: postgres://app:secret@db:5432/app
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
 volumes:
   pgdata:
   redisdata:
