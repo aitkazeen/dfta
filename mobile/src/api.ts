@@ -41,3 +41,20 @@ export async function api<T>(path: string): Promise<T> {
   }
   return res.json() as Promise<T>
 }
+
+export type ApiPair = { id: string; base: string; quote: string; displayName: string }
+export type ApiQuote = { id: string; base: string; quote: string; rate: number; asOf: string; source: string }
+export type ApiCandle = { ts: string; o: number; h: number; l: number; c: number }
+
+export function getPairs(): Promise<ApiPair[]> {
+  return api<ApiPair[]>('/v1/pairs')
+}
+
+export function getQuote(id: string): Promise<ApiQuote> {
+  return api<ApiQuote>(`/v1/pairs/${id}/quote`)
+}
+
+/** Пока только дневные свечи — см. GET /v1/pairs/:id/candles на бэкенде. */
+export function getCandles(id: string, limit = 30): Promise<ApiCandle[]> {
+  return api<ApiCandle[]>(`/v1/pairs/${id}/candles?limit=${limit}`)
+}

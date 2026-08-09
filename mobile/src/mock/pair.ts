@@ -2,9 +2,11 @@ import type { PairSnapshot } from '../types'
 
 /**
  * Моковый снимок пары USD/KZT — значения ровно из хендофф-макета (§4.3).
- * Временная заглушка на этап 0: FX-провайдер и эндпоинт /v1/pairs/snapshot
- * ещё не подключены. Форма совпадает с доменным типом, поэтому позже
- * заглушку заменит fetch без правок экрана.
+ * id/base/quote/rate/direction/deltaPct/quoteTime/officialLine/candles
+ * теперь подменяются реальными данными в app/pairs/[id].tsx (useEffect,
+ * GET /v1/pairs/:id/quote + /candles) — этот объект остаётся только
+ * начальным состоянием до первой загрузки. forecast/indicators/news/accuracy
+ * бэкенд ещё не считает (этапы 3–4 роадмапа) и здесь по-прежнему заглушка.
  */
 const usdKzt: PairSnapshot = {
   id: 'USD-KZT',

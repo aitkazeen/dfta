@@ -1,11 +1,13 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { spacing, useTheme } from '../../src/theme'
 import { formatRate, formatSignedPct } from '../../src/lib/format'
+import { getCandles, getQuote } from '../../src/api'
+import { deriveDelta } from '../../src/lib/market'
 import { getPairSnapshot } from '../../src/mock/pair'
-import type { Timeframe } from '../../src/types'
+import type { PairSnapshot, Timeframe } from '../../src/types'
 import {
   Accordion,
   AccuracyGrid,
@@ -38,7 +40,47 @@ export default function PairScreen() {
   const insets = useSafeAreaInsets()
   const router = useRouter()
   const { id } = useLocalSearchParams<{ id: string }>()
-  const snap = getPairSnapshot(id)
+
+  // forecast/indicators/news/accuracy бэкенд ещё не считает (этапы 3–4
+  // роадмапа, ForecastEngine не подключён) — берём из мока как есть.
+  // rate/direction/deltaPct/quoteTime/officialLine/candles ниже подменяются
+  // реальными данными после загрузки (useEffect), это единственные поля,
+  // для которых бэкенд уже готов.
+  const [snap, setSnap] = useState<PairSnapshot>(() => getPairSnapshot(id))
+
+  useEffect(() => {
+    if (!id) return
+    let cancelled = false
+
+    async function load() {
+      const [quote, candles] = await Promise.all([getQuote(id), getCandles(id, 30)])
+      if (cancelled || candles.length === 0) return
+
+      const { deltaPct, direction } = deriveDelta(quote.rate, candles)
+      const quoteTime = new Date(quote.asOf).toLocaleTimeString('ru-RU', {
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+
+      setSnap((prev) => ({
+        ...prev,
+        id: quote.id,
+        base: quote.base,
+        quote: quote.quote,
+        rate: quote.rate,
+        direction,
+        deltaPct,
+        quoteTime,
+        officialLine: `${quote.source === 'nbk' ? 'НБ РК' : quote.source}: ${formatRate(quote.rate)} ₸`,
+        candles: candles.map((c) => ({ o: c.o, h: c.h, l: c.l, c: c.c })),
+      }))
+    }
+
+    load().catch((err) => console.error('[pair] не удалось загрузить курс/свечи', err))
+    return () => {
+      cancelled = true
+    }
+  }, [id])
 
   const [timeframe, setTimeframe] = useState<Timeframe>('1Д')
   const [open, setOpen] = useState<OpenSections>({

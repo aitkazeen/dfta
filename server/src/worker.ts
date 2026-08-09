@@ -82,6 +82,8 @@ worker.on('failed', (job: Job | undefined, err: Error) => {
 // Регистрируем повторяющуюся задачу при каждом старте — upsertJobScheduler
 // сам обновляет существующий scheduler с тем же id, повторный вызов безопасен.
 // (queue.add({ repeat }) — старый API, в BullMQ v6 удалён в пользу job schedulers.)
-await queue.upsertJobScheduler('poll', { every: POLL_INTERVAL_MS })
+// immediately: true — без этого первый прогон ждёт полный интервал (6ч),
+// и candle остаётся пустым до тех пор.
+await queue.upsertJobScheduler('poll', { every: POLL_INTERVAL_MS, immediately: true })
 
 console.log(`[worker] started, polling every ${POLL_INTERVAL_MS / 1000}s`)

@@ -1,9 +1,13 @@
+import { useEffect, useState } from 'react'
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
 import { fontFamily, spacing, useTheme } from '../../src/theme'
-import { getWatchlist } from '../../src/mock/watchlist'
+import { getCandles, getPairs, getQuote } from '../../src/api'
+import { deriveDelta, pairFlags, sparkPoints } from '../../src/lib/market'
+import { getTodaySummary } from '../../src/mock/watchlist'
 import { Card, GearIcon, IconButton, PairRow, Text, TodayCard } from '../../src/components'
+import type { WatchlistPair } from '../../src/types'
 
 /**
  * Главный экран / watchlist (4.2). Порядок сверху вниз: карточка «Сегодня»
@@ -14,7 +18,42 @@ export default function WatchlistScreen() {
   const { colors } = useTheme()
   const insets = useSafeAreaInsets()
   const router = useRouter()
-  const { today, pairs } = getWatchlist()
+
+  // «Сегодня» — карточка с прогнозом, бэкенд его ещё не считает (мок, см.
+  // src/mock/watchlist.ts). Список пар ниже — реальные данные с бэкенда.
+  const today = getTodaySummary()
+  const [pairs, setPairs] = useState<WatchlistPair[]>([])
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function load() {
+      const list = await getPairs()
+      const rows = await Promise.all(
+        list.map(async (p): Promise<WatchlistPair> => {
+          const [quote, candles] = await Promise.all([getQuote(p.id), getCandles(p.id, 7)])
+          const { deltaPct, direction } = deriveDelta(quote.rate, candles)
+          return {
+            id: p.id,
+            flags: pairFlags(p.base, p.quote),
+            base: p.base,
+            quote: p.quote,
+            rate: quote.rate,
+            symbol: '₸',
+            direction,
+            deltaPct,
+            spark: sparkPoints(candles),
+          }
+        }),
+      )
+      if (!cancelled) setPairs(rows)
+    }
+
+    load().catch((err) => console.error('[watchlist] не удалось загрузить пары', err))
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   return (
     <View style={[styles.screen, { backgroundColor: colors.bgBase }]}>
@@ -55,6 +94,11 @@ export default function WatchlistScreen() {
         </View>
         <View style={styles.pairsWrap}>
           <Card padded={false} style={styles.pairsCard}>
+            {pairs.length === 0 && (
+              <Text variant="body" color={colors.textTertiary} style={styles.loading}>
+                Загрузка курсов…
+              </Text>
+            )}
             {pairs.map((p, i) => (
               <PairRow
                 key={p.id}
@@ -120,6 +164,7 @@ const styles = StyleSheet.create({
   },
   pairsWrap: { paddingHorizontal: spacing.lg },
   pairsCard: { overflow: 'hidden' },
+  loading: { paddingVertical: spacing.lg, textAlign: 'center' },
   addWrap: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
