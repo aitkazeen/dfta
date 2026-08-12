@@ -196,6 +196,7 @@ async function pingUniRateApi(base: string, quote: string): Promise<number> {
  * раздел вроде "Historical" / "Timeseries" (обычно ниже "Currency" в том
  * же личном кабинете) и пришли сюда пример запроса — допишу по нему.
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- заглушка на будущее, см. комментарий выше
 async function fetchUniRateApiRange(_base: string, _quote: string, _start: Date, _end: Date): Promise<DailyRates> {
   throw new Error(
     'Исторический эндпоинт UniRateAPI не подтверждён (см. комментарий у функции). ' +
@@ -322,7 +323,7 @@ async function main() {
   for (const pair of pairs) {
     console.log(`\n=== ${pair.base}/${pair.quote} ===`)
     console.log('Тяну официальный курс...')
-    let official: DailyRates = new Map()
+    let official: DailyRates
     try {
       official = await pair.official(start, end)
       console.log(`  Получено ${official.size} официальных точек.`)
