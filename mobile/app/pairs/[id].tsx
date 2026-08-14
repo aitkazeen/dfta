@@ -1,13 +1,14 @@
-import { useEffect, useState } from 'react'
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native'
-import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { useLocalSearchParams, useRouter } from 'expo-router'
-import { spacing, useTheme } from '../../src/theme'
-import { formatRate, formatSignedPct } from '../../src/lib/format'
-import { getCandles, getQuote } from '../../src/api'
-import { deriveDelta } from '../../src/lib/market'
-import { getPairSnapshot } from '../../src/mock/pair'
-import type { PairSnapshot, Timeframe } from '../../src/types'
+import { useEffect, useState } from "react";
+import { Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { spacing, useTheme } from "../../src/theme";
+import { formatRate, formatSignedPct } from "../../src/lib/format";
+import { getCandles, getIndicators, getQuote } from "../../src/api";
+import { mapIndicators } from "../../src/lib/indicators";
+import { deriveDelta } from "../../src/lib/market";
+import { getPairSnapshot } from "../../src/mock/pair";
+import type { PairSnapshot, Timeframe } from "../../src/types";
 import {
   Accordion,
   AccuracyGrid,
@@ -22,13 +23,13 @@ import {
   NewsItem,
   Text,
   TimeframeTabs,
-} from '../../src/components'
+} from "../../src/components";
 
 type OpenSections = {
-  indicators: boolean
-  news: boolean
-  accuracy: boolean
-}
+  indicators: boolean;
+  news: boolean;
+  accuracy: boolean;
+};
 
 /**
  * Экран валютной пары (4.3) — ключевой экран продукта.
@@ -36,31 +37,35 @@ type OpenSections = {
  * на виду; ниже скроллится график, ForecastCard и секции-аккордеоны.
  */
 export default function PairScreen() {
-  const { colors } = useTheme()
-  const insets = useSafeAreaInsets()
-  const router = useRouter()
-  const { id } = useLocalSearchParams<{ id: string }>()
+  const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
+  const router = useRouter();
+  const { id } = useLocalSearchParams<{ id: string }>();
 
   // forecast/indicators/news/accuracy бэкенд ещё не считает (этапы 3–4
   // роадмапа, ForecastEngine не подключён) — берём из мока как есть.
   // rate/direction/deltaPct/quoteTime/officialLine/candles ниже подменяются
   // реальными данными после загрузки (useEffect), это единственные поля,
   // для которых бэкенд уже готов.
-  const [snap, setSnap] = useState<PairSnapshot>(() => getPairSnapshot(id))
+  const [snap, setSnap] = useState<PairSnapshot>(() => getPairSnapshot(id));
 
   useEffect(() => {
-    if (!id) return
-    let cancelled = false
+    if (!id) return;
+    let cancelled = false;
 
     async function load() {
-      const [quote, candles] = await Promise.all([getQuote(id), getCandles(id, 30)])
-      if (cancelled || candles.length === 0) return
+      const [quote, candles, indicators] = await Promise.all([
+        getQuote(id),
+        getCandles(id, 30),
+        getIndicators(id),
+      ]);
+      if (cancelled || candles.length === 0) return;
 
-      const { deltaPct, direction } = deriveDelta(quote.rate, candles)
-      const quoteTime = new Date(quote.asOf).toLocaleTimeString('ru-RU', {
-        hour: '2-digit',
-        minute: '2-digit',
-      })
+      const { deltaPct, direction } = deriveDelta(quote.rate, candles);
+      const quoteTime = new Date(quote.asOf).toLocaleTimeString("ru-RU", {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
 
       setSnap((prev) => ({
         ...prev,
@@ -71,26 +76,29 @@ export default function PairScreen() {
         direction,
         deltaPct,
         quoteTime,
-        officialLine: `${quote.source === 'nbk' ? 'НБ РК' : quote.source}: ${formatRate(quote.rate)} ₸`,
+        officialLine: `${quote.source === "nbk" ? "НБ РК" : quote.source}: ${formatRate(quote.rate)} ₸`,
         candles: candles.map((c) => ({ o: c.o, h: c.h, l: c.l, c: c.c })),
-      }))
+        indicators: mapIndicators(indicators, quote.rate, prev.symbol),
+      }));
     }
 
-    load().catch((err) => console.error('[pair] не удалось загрузить курс/свечи', err))
+    load().catch((err) =>
+      console.error("[pair] не удалось загрузить курс/свечи", err),
+    );
     return () => {
-      cancelled = true
-    }
-  }, [id])
+      cancelled = true;
+    };
+  }, [id]);
 
-  const [timeframe, setTimeframe] = useState<Timeframe>('1Д')
+  const [timeframe, setTimeframe] = useState<Timeframe>("1Д");
   const [open, setOpen] = useState<OpenSections>({
     indicators: true,
     news: false,
     accuracy: false,
-  })
+  });
 
   const toggle = (key: keyof OpenSections) =>
-    setOpen((s) => ({ ...s, [key]: !s[key] }))
+    setOpen((s) => ({ ...s, [key]: !s[key] }));
 
   return (
     <View style={[styles.screen, { backgroundColor: colors.bgBase }]}>
@@ -98,7 +106,10 @@ export default function PairScreen() {
       <View
         style={[
           styles.header,
-          { paddingTop: insets.top + spacing.sm, borderBottomColor: colors.borderSubtle },
+          {
+            paddingTop: insets.top + spacing.sm,
+            borderBottomColor: colors.borderSubtle,
+          },
         ]}
       >
         <View style={styles.navRow}>
@@ -122,13 +133,24 @@ export default function PairScreen() {
           <Text variant="display" tabular>
             {formatRate(snap.rate)} {snap.symbol}
           </Text>
-          <DirectionBadge direction={snap.direction} label={formatSignedPct(snap.deltaPct)} />
+          <DirectionBadge
+            direction={snap.direction}
+            label={formatSignedPct(snap.deltaPct)}
+          />
         </View>
 
-        <Text variant="caption" color={colors.textTertiary} style={styles.quoteLine}>
+        <Text
+          variant="caption"
+          color={colors.textTertiary}
+          style={styles.quoteLine}
+        >
           Курс на {snap.quoteTime} · обновляется каждые 15 мин
         </Text>
-        <Text variant="caption" color={colors.textTertiary} style={styles.officialLine}>
+        <Text
+          variant="caption"
+          color={colors.textTertiary}
+          style={styles.officialLine}
+        >
           {snap.officialLine}
         </Text>
       </View>
@@ -144,7 +166,10 @@ export default function PairScreen() {
           </View>
           <CandleChart
             candles={snap.candles}
-            forecast={{ low: snap.forecast.targetLow, high: snap.forecast.targetHigh }}
+            forecast={{
+              low: snap.forecast.targetLow,
+              high: snap.forecast.targetHigh,
+            }}
           />
         </View>
 
@@ -159,11 +184,19 @@ export default function PairScreen() {
 
         {/* Аккордеоны */}
         <View style={styles.blockH}>
-          <View style={[styles.accordions, { backgroundColor: colors.bgSurface, borderColor: colors.borderSubtle }]}>
+          <View
+            style={[
+              styles.accordions,
+              {
+                backgroundColor: colors.bgSurface,
+                borderColor: colors.borderSubtle,
+              },
+            ]}
+          >
             <Accordion
               title="Индикаторы"
               open={open.indicators}
-              onToggle={() => toggle('indicators')}
+              onToggle={() => toggle("indicators")}
               first
             >
               {snap.indicators.map((ind) => (
@@ -171,7 +204,11 @@ export default function PairScreen() {
               ))}
             </Accordion>
 
-            <Accordion title="Новости по паре" open={open.news} onToggle={() => toggle('news')}>
+            <Accordion
+              title="Новости по паре"
+              open={open.news}
+              onToggle={() => toggle("news")}
+            >
               {snap.news.map((article) => (
                 <NewsItem key={article.title} article={article} />
               ))}
@@ -191,11 +228,16 @@ export default function PairScreen() {
             <Accordion
               title="Точность прогнозов"
               open={open.accuracy}
-              onToggle={() => toggle('accuracy')}
+              onToggle={() => toggle("accuracy")}
             >
-              <Text variant="body" color={colors.textSecondary} style={styles.accuracyText}>
-                {snap.accuracy.hitRatePct}% предсказаний совпало с фактическим направлением —{' '}
-                {snap.accuracy.total} прогнозов за {snap.accuracy.windowDays} дней.
+              <Text
+                variant="body"
+                color={colors.textSecondary}
+                style={styles.accuracyText}
+              >
+                {snap.accuracy.hitRatePct}% предсказаний совпало с фактическим
+                направлением — {snap.accuracy.total} прогнозов за{" "}
+                {snap.accuracy.windowDays} дней.
               </Text>
               <AccuracyGrid outcomes={snap.accuracy.outcomes} />
             </Accordion>
@@ -207,7 +249,7 @@ export default function PairScreen() {
         </View>
       </ScrollView>
     </View>
-  )
+  );
 }
 
 const styles = StyleSheet.create({
@@ -218,14 +260,14 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
   },
   navRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
   rateRow: {
     marginTop: spacing.lg + 2, // 18
-    flexDirection: 'row',
-    alignItems: 'baseline',
+    flexDirection: "row",
+    alignItems: "baseline",
     gap: spacing.sm + 2, // 10
   },
   quoteLine: { marginTop: 6 },
@@ -239,7 +281,7 @@ const styles = StyleSheet.create({
   accordions: {
     borderWidth: 1,
     borderRadius: 16,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   allNews: { paddingTop: spacing.md },
   accuracyText: { marginBottom: spacing.sm + 2 },
@@ -247,4 +289,4 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.xxl,
   },
-})
+});

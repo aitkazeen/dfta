@@ -54,12 +54,20 @@ export function CandleChart({ candles, forecast }: Props) {
         {candles.map((cd, i) => {
           const x = i * STEP
           const cx = x + BODY_W / 2
-          const up = cd.c >= cd.o
+          // НБ РК даёт один фиксинг в день, поэтому o===h===l===c внутри
+          // каждой свечи (нет реального внутридневного диапазона) — тело
+          // "open→close этого же дня" всегда было бы нулевым. Вместо этого
+          // тело показывает close→close: сегодняшнее закрытие относительно
+          // вчерашнего, что и есть единственное реальное движение в данных.
+          const prevClose = candles[i - 1]?.c ?? cd.o
+          const up = cd.c >= prevClose
           const color = up ? colors.up : colors.down
-          const yOpen = scaleY(cd.o)
+          const yPrevClose = scaleY(prevClose)
           const yClose = scaleY(cd.c)
-          const bodyY = Math.min(yOpen, yClose)
-          const bodyH = Math.max(1.5, Math.abs(yClose - yOpen))
+
+          const bodyY = Math.min(yPrevClose, yClose)
+          const bodyH = Math.max(1.5, Math.abs(yClose - yPrevClose))
+          console.log(cd)
           return (
             <Fragment key={i}>
               <Line x1={cx} x2={cx} y1={scaleY(cd.h)} y2={scaleY(cd.l)} stroke={color} strokeWidth={1} />
