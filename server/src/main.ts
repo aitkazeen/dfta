@@ -1,4 +1,7 @@
 import Fastify from 'fastify'
+
+import cors from '@fastify/cors'
+
 import { PrismaClient } from '@prisma/client'
 import { createQuoteProvider } from './modules/market/quote-provider.factory.js'
 import { marketRoutes } from './modules/market/routes.js'
@@ -10,6 +13,8 @@ const app = Fastify({ logger: true })
 app.get('/health', async () => {
   return { ok: true, time: new Date().toISOString() }
 })
+
+await app.register(cors, { origin: true })
 
 const quoteProvider = createQuoteProvider(process.env, app.log)
 await app.register(marketRoutes({ db, quoteProvider }))

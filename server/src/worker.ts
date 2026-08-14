@@ -3,6 +3,7 @@ import { Queue, Worker, type Job } from 'bullmq'
 import IORedis from 'ioredis'
 import { createQuoteProvider } from './modules/market/quote-provider.factory.js'
 import type { Quote } from './modules/market/types.js'
+import { computeIndicators } from "./modules/indicators/compute.js"
 
 const QUEUE_NAME = 'quotes'
 // НБ РК публикует один фиксинг в сутки (см. nbk.ts) — курс внутри дня не
@@ -29,6 +30,7 @@ async function pollAllPairs(): Promise<void> {
     try {
       const quote = await quoteProvider.getQuote(pair.baseCode, pair.quoteCode)
       await upsertDailyCandle(pair.id, quote)
+      await recomputeIndicators(pair.id)
       console.log(`[worker] ${pair.id}: ${quote.rate} (${quote.source})`)
     } catch (err) {
       // Одна упавшая пара не должна останавливать обход остальных.
@@ -71,6 +73,23 @@ async function upsertDailyCandle(pairId: string, quote: Quote): Promise<void> {
       source: quote.source,
     },
   })
+}
+
+async function recomputeIndicators(pairId: string): Promise<void> {
+  const candles = await db.candle.findMany({
+    where: { pairId, timeframe: '1d' },
+    orderBy: { ts: 'asc' },
+  })
+  const points = computeIndicators(
+      candles.map((c) => ({ ts: c.ts, open: c.open.toNumber(), high: c.high.toNumber(), low: c.low.toNumber(), close: c.close.toNumber() }))
+  )
+  for (const p of points) {
+    await db.indicatorValue.upsert({
+      where: { pairId_timeframe_ts_name: { pairId, timeframe: '1d', ts: p.ts, name: p.name } },
+      create: { pairId, timeframe: '1d', ts: p.ts, name: p.name, value: p.value },
+      update: { value: p.value },
+    })
+  }
 }
 
 const worker = new Worker(QUEUE_NAME, () => pollAllPairs(), { connection })

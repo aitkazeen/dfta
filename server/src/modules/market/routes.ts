@@ -72,5 +72,25 @@ export function marketRoutes(deps: MarketRoutesDeps) {
         return reply.code(502).send({ error: 'quote provider unavailable' })
       }
     })
+
+    app.get('/v1/pairs/:id/indicators', async (req, reply) => {
+      const { id } = req.params as { id: string }
+
+      const pair = await deps.db.currencyPair.findUnique({ where: { id } })
+
+      if (!pair) {
+        return reply.code(404).send({error: "pair not found"})
+      }
+
+      const rows = await deps.db.indicatorValue.findMany({
+        where: { pairId: id, timeframe: '1d' },
+        orderBy: { ts: "desc"},
+        distinct: ["name"]
+      })
+
+      return Object.fromEntries(
+          rows.map((r) => [r.name, { value: r.value.toNumber(), ts: r.ts.toISOString()}])
+      )
+    })
   }
 }
