@@ -1,7 +1,6 @@
 import type { PrismaClient } from '@prisma/client'
 import type { FastifyInstance } from 'fastify'
 import type { IQuoteProvider } from './types.js'
-
 type MarketRoutesDeps = {
   db: PrismaClient
   quoteProvider: IQuoteProvider

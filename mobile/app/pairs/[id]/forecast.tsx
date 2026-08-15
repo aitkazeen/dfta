@@ -1,9 +1,11 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { fontFamily, radius, spacing, useTheme } from '../../../src/theme'
 import { formatRange, formatRate } from '../../../src/lib/format'
+import { getForecast, getQuote } from '../../../src/api'
+import { DIRECTION_LABEL, fallbackTargetRange } from '../../../src/lib/forecast'
 import { getFullForecast } from '../../../src/mock/fullForecast'
 import type { ForecastHorizon } from '../../../src/types'
 import {
@@ -32,7 +34,39 @@ export default function FullForecastScreen() {
   const insets = useSafeAreaInsets()
   const router = useRouter()
   const { id } = useLocalSearchParams<{ id: string }>()
-  const forecast = getFullForecast(id)
+  // Реальными становятся только direction/target*/confidence/currentRate —
+  // остальное (confidenceExplanation, aiExplanation, драйверы с источниками,
+  // accuracy, trend) требует LLM-шага и forecast_outcome (задача #9),
+  // которых ещё нет. Выдумывать эти поля хуже, чем явно оставить мок.
+  const [forecast, setForecast] = useState(() => getFullForecast(id))
+
+  useEffect(() => {
+    if (!id) return
+    let cancelled = false
+
+    Promise.all([getQuote(id), getForecast(id).catch(() => null)])
+      .then(([quote, api]) => {
+        if (cancelled) return
+        setForecast((prev) => ({
+          ...prev,
+          currentRate: quote.rate,
+          ...(api
+            ? {
+                direction: api.direction,
+                directionLabel: DIRECTION_LABEL[api.direction],
+                targetLow: api.targetLow,
+                targetHigh: api.targetHigh,
+                confidence: Math.round(api.confidence * 100),
+              }
+            : fallbackTargetRange(quote.rate)),
+        }))
+      })
+      .catch((err) => console.error('[forecast] не удалось загрузить курс/прогноз', err))
+
+    return () => {
+      cancelled = true
+    }
+  }, [id])
 
   const [horizon, setHorizon] = useState<ForecastHorizon>('24ч')
   const [confidenceOpen, setConfidenceOpen] = useState(false)

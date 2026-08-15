@@ -5,6 +5,19 @@ export type ApiPair = { id: string; base: string; quote: string; displayName: st
 export type ApiQuote = { id: string; base: string; quote: string; rate: number; asOf: string; source: string }
 export type ApiCandle = { ts: string; o: number; h: number; l: number; c: number }
 export type ApiIndicators = Record<string, {value: string, ts: string}>
+export type ApiForecast = {
+  pairId: string
+  horizon: string
+  direction: 'up' | 'down' | 'flat'
+  confidence: number // 0..1 — на фронте (types.ts Forecast.confidence) шкала 0..100
+  targetLow: number
+  targetHigh: number
+  engineVersion: string
+  createdAt: string
+  explanation: string | null // LLM-шаг ещё не подключён (этап 4, позже)
+  drivers: unknown | null // то же самое
+}
+
 /**
  * Самая частая проблема новичка: приложение не видит бэкенд.
  * Причина в том, что "localhost" внутри телефона или эмулятора
@@ -61,4 +74,10 @@ export function getCandles(id: string, limit = 30): Promise<ApiCandle[]> {
 
 export function getIndicators(id: string): Promise<ApiIndicators> {
   return api<ApiIndicators>(`/v1/pairs/${id}/indicators`)
+}
+
+/** 404, пока воркер не сгенерировал первый прогноз для пары — это ожидаемо,
+ *  не ошибка; вызывающая сторона сама решает, чем заполнить состояние. */
+export function getForecast(id: string): Promise<ApiForecast> {
+  return api<ApiForecast>(`/v1/pairs/${id}/forecast`)
 }

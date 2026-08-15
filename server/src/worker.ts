@@ -1,9 +1,14 @@
-import { PrismaClient } from '@prisma/client'
+import { PrismaClient, Prisma } from '@prisma/client'
 import { Queue, Worker, type Job } from 'bullmq'
 import IORedis from 'ioredis'
 import { createQuoteProvider } from './modules/market/quote-provider.factory.js'
 import type { Quote } from './modules/market/types.js'
 import { computeIndicators } from "./modules/indicators/compute.js"
+import { getLatestIndicators } from "./modules/indicators/repository";
+import { RulesForecastEngine } from "./modules/forecast/rules-engine.js";
+import { resolveForecastOutcome } from "./modules/forecast/outcomes.js";
+import { forecastConfig } from "./modules/forecast/config.js";
+import type { Direction } from "./modules/forecast/types.js";
 
 const QUEUE_NAME = 'quotes'
 // НБ РК публикует один фиксинг в сутки (см. nbk.ts) — курс внутри дня не
@@ -12,8 +17,14 @@ const QUEUE_NAME = 'quotes'
 // и числом запросов к nationalbank.kz.
 const POLL_INTERVAL_MS = 6 * 60 * 60 * 1000
 
+const HORIZON_MS: Record<string, number> = {
+  '24h': 24 * 60 * 60 * 1000,
+  '7d': 7 * 24 * 60 * 60 * 1000,
+}
+
 const db = new PrismaClient()
 const quoteProvider = createQuoteProvider()
+const forecastEngine = new RulesForecastEngine()
 
 // Worker использует блокирующие Redis-команды — maxRetriesPerRequest: null
 // обязателен, без него BullMQ падает на старте (требование библиотеки, не наш выбор).
@@ -31,10 +42,66 @@ async function pollAllPairs(): Promise<void> {
       const quote = await quoteProvider.getQuote(pair.baseCode, pair.quoteCode)
       await upsertDailyCandle(pair.id, quote)
       await recomputeIndicators(pair.id)
+      await maybeGenerateForecast(pair.id, quote.rate)
       console.log(`[worker] ${pair.id}: ${quote.rate} (${quote.source})`)
     } catch (err) {
       // Одна упавшая пара не должна останавливать обход остальных.
       console.error(`[worker] ${pair.id} failed:`, (err as Error).message)
+    }
+  }
+
+  await resolvePendingOutcomes()
+}
+
+// Правило 5 (CLAUDE.md): forecast_outcome пишется всегда, для каждого
+// прогноза, у которого истёк горизонт. Не пара за парой, а один проход по
+// всем нерезолвленным прогнозам сразу — резолв не привязан к текущему
+// опросу конкретной пары.
+async function resolvePendingOutcomes(): Promise<void> {
+  const pending = await db.forecast.findMany({ where: { outcome: null } })
+
+  for (const forecast of pending) {
+    try {
+      const horizonMs = HORIZON_MS[forecast.horizon]
+      if (!horizonMs) continue // неизвестный horizon — не должно случиться, но не роняем остальные
+
+      const resolutionDay = startOfUtcDay(new Date(forecast.createdAt.getTime() + horizonMs))
+      if (resolutionDay.getTime() > startOfUtcDay(new Date()).getTime()) continue // горизонт ещё не истёк
+
+      // Свечи дневные (см. upsertDailyCandle) — резолвим по свече ровно
+      // того дня, на который выпал конец горизонта. Если её ещё нет
+      // (воркер не успел опросить эту пару в этот день) — пробуем на
+      // следующем прогоне, а не подставляем ближайшую по времени.
+      const candle = await db.candle.findUnique({
+        where: { pairId_timeframe_ts: { pairId: forecast.pairId, timeframe: '1d', ts: resolutionDay } },
+      })
+      if (!candle) continue
+
+      const features = forecast.features as { close?: number }
+      if (typeof features.close !== 'number') continue // прогнозы без сохранённого close не резолвим (не должно случаться)
+
+      const actualClose = candle.close.toNumber()
+      const { wasCorrect, absError } = resolveForecastOutcome({
+        direction: forecast.direction as Direction,
+        originalClose: features.close,
+        targetLow: forecast.targetLow.toNumber(),
+        targetHigh: forecast.targetHigh.toNumber(),
+        actualClose,
+        deadZonePct: forecastConfig.decision.flatThreshold * forecastConfig.decision.maxMovePct,
+      })
+
+      await db.forecastOutcome.create({
+        data: {
+          forecastId: forecast.id,
+          resolvedAt: new Date(),
+          actualClose,
+          wasCorrect,
+          absError,
+        },
+      })
+      console.log(`[worker] forecast ${forecast.id} resolved: wasCorrect=${wasCorrect}`)
+    } catch (err) {
+      console.error(`[worker] forecast ${forecast.id} outcome resolution failed:`, (err as Error).message)
     }
   }
 }
@@ -90,6 +157,54 @@ async function recomputeIndicators(pairId: string): Promise<void> {
       update: { value: p.value },
     })
   }
+}
+function startOfUtcDay(date: Date): Date {
+  return new Date(
+    Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()),
+  );
+}
+
+async function shouldGenerateForecast(
+  pairId: string,
+  today: string | Date,
+): Promise<boolean> {
+  const existing = await db.forecast.findFirst({
+    where: { pairId, createdAt: { gte: today } },
+  });
+  return existing === null;
+}
+
+async function maybeGenerateForecast(
+  pairId: string,
+  close: number,
+): Promise<void> {
+  const today = startOfUtcDay(new Date());
+  if (!(await shouldGenerateForecast(pairId, today))) return;
+
+  const indicators = await getLatestIndicators(db, pairId);
+  const result = await forecastEngine.predict({
+    pairId,
+    horizon: "24h",
+    close,
+    indicators,
+  });
+
+  await db.forecast.create({
+    data: {
+      pairId,
+      horizon: "24h",
+      direction: result.direction,
+      confidence: result.confidence,
+      targetLow: result.targetLow,
+      targetHigh: result.targetHigh,
+      engineVersion: result.engineVersion,
+      // Prisma не принимает Record<string, unknown> напрямую как JSON-инпут —
+      // ForecastResult.features сознательно типизирован без зависимости на
+      // Prisma (ForecastEngine не должен знать о хранилище), поэтому приводим
+      // тип здесь, на границе записи в БД, а не в domain-типе.
+      features: result.features as Prisma.InputJsonValue,
+    },
+  });
 }
 
 const worker = new Worker(QUEUE_NAME, () => pollAllPairs(), { connection })

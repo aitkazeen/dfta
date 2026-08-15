@@ -4,8 +4,9 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { spacing, useTheme } from "../../src/theme";
 import { formatRate, formatSignedPct } from "../../src/lib/format";
-import { getCandles, getIndicators, getQuote } from "../../src/api";
+import { getCandles, getForecast, getIndicators, getQuote } from "../../src/api";
 import { mapIndicators } from "../../src/lib/indicators";
+import { fallbackTargetRange, mapForecast } from "../../src/lib/forecast";
 import { deriveDelta } from "../../src/lib/market";
 import { getPairSnapshot } from "../../src/mock/pair";
 import type { PairSnapshot, Timeframe } from "../../src/types";
@@ -42,11 +43,13 @@ export default function PairScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
 
-  // forecast/indicators/news/accuracy бэкенд ещё не считает (этапы 3–4
-  // роадмапа, ForecastEngine не подключён) — берём из мока как есть.
-  // rate/direction/deltaPct/quoteTime/officialLine/candles ниже подменяются
-  // реальными данными после загрузки (useEffect), это единственные поля,
-  // для которых бэкенд уже готов.
+  // news/accuracy бэкенд ещё не считает (этап 3, INewsProvider/forecast_outcome
+  // не подключены) — берём из мока как есть. rate/direction/deltaPct/quoteTime/
+  // officialLine/candles/indicators/forecast ниже подменяются реальными данными
+  // после загрузки (useEffect) — forecast частично: direction/confidence/
+  // targetLow/High реальные (RulesForecastEngine), explanation/drivers пустые
+  // (LLM-шаг не подключён), enginePairAccuracyPct/Days всё ещё мок (задача #9,
+  // forecast_outcome).
   const [snap, setSnap] = useState<PairSnapshot>(() => getPairSnapshot(id));
 
   useEffect(() => {
@@ -67,6 +70,12 @@ export default function PairScreen() {
         minute: "2-digit",
       });
 
+      // Отдельно от Promise.all выше: 404 здесь — ожидаемое состояние
+      // (воркер ещё не прогнал сутки для этой пары), не должно валить
+      // загрузку курса/свечей/индикаторов, которые уже пришли успешно.
+      const apiForecast = await getForecast(id).catch(() => null);
+      if (cancelled) return;
+
       setSnap((prev) => ({
         ...prev,
         id: quote.id,
@@ -79,17 +88,9 @@ export default function PairScreen() {
         officialLine: `${quote.source === "nbk" ? "НБ РК" : quote.source}: ${formatRate(quote.rate)} ₸`,
         candles: candles.map((c) => ({ o: c.o, h: c.h, l: c.l, c: c.c })),
         indicators: mapIndicators(indicators, quote.rate, prev.symbol),
-        // forecast всё ещё мок (ForecastEngine не подключён, этап 4) — но
-        // targetLow/High мока всегда в масштабе USD-KZT (~510). Для любой
-        // другой пары это ломает домен CandleChart (см. баг с RUB-KZT):
-        // абсолютные числа мока смешиваются с реальными свечами в другом
-        // масштабе. Пересчитываем только масштаб, не выдавая это за
-        // настоящий прогноз — остальные поля (текст, драйверы) остаются мок.
-        forecast: {
-          ...prev.forecast,
-          targetLow: quote.rate * 0.995,
-          targetHigh: quote.rate * 1.01,
-        },
+        forecast: apiForecast
+          ? mapForecast(apiForecast, prev.forecast)
+          : { ...prev.forecast, ...fallbackTargetRange(quote.rate) },
       }));
     }
 

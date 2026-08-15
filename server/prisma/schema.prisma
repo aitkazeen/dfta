@@ -34,6 +34,7 @@ model CurrencyPair {
   quote   Currency @relation("QuoteCurrency", fields: [quoteCode], references: [code])
   candles Candle[]
   indicators IndicatorValue[]
+  forecasts Forecast[]
 
   @@unique([baseCode, quoteCode])
   @@map("currency_pair")
@@ -67,4 +68,36 @@ model IndicatorValue {
 
   @@id([pairId, timeframe, ts, name])
   @@map("indicator_value")
+}
+
+model Forecast {
+  id            String   @id @default(cuid())
+  pairId        String   @map("pair_id")
+  createdAt     DateTime @default(now()) @map("created_at")
+  horizon       String   // '24h' | '7d' — строкой, как Candle.timeframe, без Prisma-enum
+  direction     String   // 'up' | 'down' | 'flat'
+  confidence    Decimal  @db.Decimal(18, 6)
+  targetLow     Decimal  @map("target_low")  @db.Decimal(18, 6)
+  targetHigh    Decimal  @map("target_high") @db.Decimal(18, 6)
+  engineVersion String   @map("engine_version")
+  features      Json
+  explanation   String?  // LLM-текст, пока не считается (Этап 4 позже) — nullable
+  drivers       Json?    // топ-3 причины от LLM, тоже пока не считается
+
+  pair    CurrencyPair    @relation(fields: [pairId], references: [id])
+  outcome ForecastOutcome?
+
+  @@map("forecast")
+}
+
+model ForecastOutcome {
+  forecastId  String   @id @map("forecast_id")
+  resolvedAt  DateTime @map("resolved_at")
+  actualClose Decimal  @db.Decimal(18, 6) @map("actual_close")
+  wasCorrect  Boolean  @map("was_correct")
+  absError    Decimal  @db.Decimal(18, 6) @map("abs_error")
+
+  forecast Forecast @relation(fields: [forecastId], references: [id])
+
+  @@map("forecast_outcome")
 }

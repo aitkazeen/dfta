@@ -5,6 +5,7 @@ import cors from '@fastify/cors'
 import { PrismaClient } from '@prisma/client'
 import { createQuoteProvider } from './modules/market/quote-provider.factory.js'
 import { marketRoutes } from './modules/market/routes.js'
+import { forecastRoutes } from './modules/forecast/routes.js'
 
 const db = new PrismaClient()
 const app = Fastify({ logger: true })
@@ -18,6 +19,7 @@ await app.register(cors, { origin: true })
 
 const quoteProvider = createQuoteProvider(process.env, app.log)
 await app.register(marketRoutes({ db, quoteProvider }))
+await app.register(forecastRoutes({ db }))
 
 const port = Number(process.env.PORT ?? 3000)
 
