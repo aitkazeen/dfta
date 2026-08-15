@@ -79,6 +79,17 @@ export default function PairScreen() {
         officialLine: `${quote.source === "nbk" ? "НБ РК" : quote.source}: ${formatRate(quote.rate)} ₸`,
         candles: candles.map((c) => ({ o: c.o, h: c.h, l: c.l, c: c.c })),
         indicators: mapIndicators(indicators, quote.rate, prev.symbol),
+        // forecast всё ещё мок (ForecastEngine не подключён, этап 4) — но
+        // targetLow/High мока всегда в масштабе USD-KZT (~510). Для любой
+        // другой пары это ломает домен CandleChart (см. баг с RUB-KZT):
+        // абсолютные числа мока смешиваются с реальными свечами в другом
+        // масштабе. Пересчитываем только масштаб, не выдавая это за
+        // настоящий прогноз — остальные поля (текст, драйверы) остаются мок.
+        forecast: {
+          ...prev.forecast,
+          targetLow: quote.rate * 0.995,
+          targetHigh: quote.rate * 1.01,
+        },
       }));
     }
 
