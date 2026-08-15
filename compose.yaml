@@ -58,6 +58,13 @@ services:
     environment:
       DATABASE_URL: postgres://app:secret@db:5432/app
       REDIS_URL: redis://redis:6379
+      # ${VAR} — Compose подставляет значение из .env в корне репозитория
+      # (не server/.env — тот читают только npm-скрипты вне Docker) или из
+      # переменной окружения хоста. Без обоих ключей воркер просто не пишет
+      # explanation/drivers (см. explainer.factory.ts) — не обязательны.
+      # При обоих заданных выигрывает бесплатный Gemini.
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
     depends_on:
       db:
         condition: service_healthy

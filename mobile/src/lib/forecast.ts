@@ -17,11 +17,12 @@ export function fallbackTargetRange(rate: number): { targetLow: number; targetHi
 }
 
 /**
- * RulesForecastEngine (этап 4) уже считает direction/confidence/targetLow/High —
- * explanation/drivers остаются null, пока не подключён LLM-шаг, поэтому
- * подставляем пустые значения, а не пытаемся угадать текст.
- * enginePairAccuracyPct/enginePairWindowDays берём из prev (мок) — это
- * требует forecast_outcome (задача #9), которого ещё нет.
+ * RulesForecastEngine + Explainer (этап 4) считают все поля кроме
+ * enginePairAccuracyPct/enginePairWindowDays — эти два берём из prev (мок),
+ * т.к. на бэкенде ещё нет роута отдающего агрегированную точность по паре
+ * (сами forecast_outcome уже пишутся воркером, эндпоинта для чтения нет).
+ * explanation/drivers у ответа API бывают null — если ANTHROPIC_API_KEY не
+ * задан на бэкенде или LLM-вызов не удался, подставляем пустые значения.
  */
 export function mapForecast(api: ApiForecast, prev: Forecast): Forecast {
   return {

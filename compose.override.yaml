@@ -22,8 +22,12 @@ services:
       target: build
     # migrate deploy применяет уже существующие файлы миграций (prisma/migrations/),
     # ничего не генерирует сам — в отличие от db push, безопасен для повторных запусков
-    # и не спорит с историей миграций.
-    command: sh -c "npx prisma migrate deploy && npm run dev"
+    # и не спорит с историей миграций. prisma generate — отдельно и обязательно на
+    # каждый старт: prisma/ примонтирован с хоста поверх образа (volumes ниже), так
+    # что Prisma Client, собранный во время сборки образа, может отстать от живой
+    # schema.prisma после git pull/checkout — без generate тут словишь непонятный
+    # "Cannot read properties of undefined" на моделях, которых нет в старом клиенте.
+    command: sh -c "npx prisma generate && npx prisma migrate deploy && npm run dev"
     volumes:
       # Код монтируем с хоста, чтобы правки подхватывались без пересборки.
       - ./server/src:/app/src

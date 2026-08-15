@@ -43,13 +43,14 @@ export default function PairScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
 
-  // news/accuracy бэкенд ещё не считает (этап 3, INewsProvider/forecast_outcome
-  // не подключены) — берём из мока как есть. rate/direction/deltaPct/quoteTime/
-  // officialLine/candles/indicators/forecast ниже подменяются реальными данными
-  // после загрузки (useEffect) — forecast частично: direction/confidence/
-  // targetLow/High реальные (RulesForecastEngine), explanation/drivers пустые
-  // (LLM-шаг не подключён), enginePairAccuracyPct/Days всё ещё мок (задача #9,
-  // forecast_outcome).
+  // news бэкенд ещё не считает (этап 3, INewsProvider не подключён) — берём
+  // из мока как есть. rate/direction/deltaPct/quoteTime/officialLine/candles/
+  // indicators/forecast ниже подменяются реальными данными после загрузки
+  // (useEffect) — forecast почти весь реальный (direction/confidence/
+  // targetLow/High от RulesForecastEngine, explanation/drivers от Explainer,
+  // могут быть пустыми, если ANTHROPIC_API_KEY не задан или LLM-вызов не
+  // удался); enginePairAccuracyPct/Days всё ещё мок — forecast_outcome воркер
+  // уже пишет, но эндпоинта для чтения агрегированной точности пока нет.
   const [snap, setSnap] = useState<PairSnapshot>(() => getPairSnapshot(id));
 
   useEffect(() => {

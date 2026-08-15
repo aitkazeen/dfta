@@ -30,3 +30,38 @@ export interface ForecastEngine {
   predict(input: ForecastInput): Promise<ForecastResult>;
   readonly version: string;
 }
+
+// Категории драйверов синхронизированы с mobile/src/types.ts DriverCategory —
+// 'news'/'regulator'/'global' зарезервированы под этапы 3+, когда появится
+// новостной слой. Explainer сегодня видит только технические индикаторы,
+// поэтому реально проставляет только 'technical'.
+export type DriverCategory = "technical" | "news" | "regulator" | "global";
+
+export type ExplainDriver = {
+  category: DriverCategory;
+  text: string;
+};
+
+export type ExplainInput = {
+  base: string; // "USD"
+  quote: string; // "KZT"
+  direction: Direction;
+  technicalScore: number;
+  close: number;
+  targetLow: number;
+  targetHigh: number;
+  indicators: IndicatorSnapshot;
+};
+
+export type ExplainResult = {
+  explanation: string;
+  drivers: ExplainDriver[];
+};
+
+// Правило 3 (CLAUDE.md): LLM только генерирует текст объяснения по уже
+// посчитанным числам, никогда не участвует в расчёте самого прогноза.
+// null — explainer недоступен или ответ не удалось получить/распарсить;
+// это не должно ронять генерацию прогноза (см. worker.ts maybeGenerateForecast).
+export interface Explainer {
+  explain(input: ExplainInput): Promise<ExplainResult | null>;
+}

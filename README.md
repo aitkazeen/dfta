@@ -139,6 +139,7 @@ docker compose exec api npx prisma studio
 - `DATABASE_URL` — для Docker уже прописан в `compose.yaml` (хост `db`); `.env` нужен только для запуска сервера напрямую без Docker (тогда хост `localhost`)
 - `REDIS_URL` — аналогично, для Docker уже в `compose.yaml`
 - `FOREXRATEAPI_KEY` / `UNIRATEAPI_KEY` / `MARKETAUXAPI_KEY` — ключи внешних провайдеров, нужны для `npm run fx:compare`, `fx:export-dataset`, `marketaux:test`
+- `GEMINI_API_KEY` / `ANTHROPIC_API_KEY` — LLM-объяснение прогноза (`server/src/modules/forecast/explainer.factory.ts`). Нужен хотя бы один, иначе воркер просто не заполняет `explanation`/`drivers` у прогноза — не обязательны для локального запуска. При обоих заданных выигрывает Gemini — у него постоянный бесплатный тариф (aistudio.google.com), у Anthropic только разовый триал-кредит. Для Docker положи ключ(и) в `.env` **в корне репозитория** (не `server/.env` — тот читают только npm-скрипты вне контейнера), Compose подставит их в `worker` через `compose.yaml`
 
 ## Если что-то не работает
 

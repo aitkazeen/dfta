@@ -8,6 +8,7 @@ import { getLatestIndicators } from "./modules/indicators/repository";
 import { RulesForecastEngine } from "./modules/forecast/rules-engine.js";
 import { resolveForecastOutcome } from "./modules/forecast/outcomes.js";
 import { forecastConfig } from "./modules/forecast/config.js";
+import { createExplainer } from "./modules/forecast/explainer.factory.js";
 import type { Direction } from "./modules/forecast/types.js";
 
 const QUEUE_NAME = 'quotes'
@@ -31,6 +32,7 @@ const forecastEngine = new RulesForecastEngine()
 const connection = new IORedis(process.env.REDIS_URL ?? 'redis://localhost:6379', {
   maxRetriesPerRequest: null,
 })
+const explainer = createExplainer(connection)
 
 const queue = new Queue(QUEUE_NAME, { connection })
 
@@ -42,7 +44,7 @@ async function pollAllPairs(): Promise<void> {
       const quote = await quoteProvider.getQuote(pair.baseCode, pair.quoteCode)
       await upsertDailyCandle(pair.id, quote)
       await recomputeIndicators(pair.id)
-      await maybeGenerateForecast(pair.id, quote.rate)
+      await maybeGenerateForecast(pair, quote.rate)
       console.log(`[worker] ${pair.id}: ${quote.rate} (${quote.source})`)
     } catch (err) {
       // Одна упавшая пара не должна останавливать обход остальных.
@@ -175,23 +177,44 @@ async function shouldGenerateForecast(
 }
 
 async function maybeGenerateForecast(
-  pairId: string,
+  pair: { id: string; baseCode: string; quoteCode: string },
   close: number,
 ): Promise<void> {
   const today = startOfUtcDay(new Date());
-  if (!(await shouldGenerateForecast(pairId, today))) return;
+  if (!(await shouldGenerateForecast(pair.id, today))) return;
 
-  const indicators = await getLatestIndicators(db, pairId);
+  const indicators = await getLatestIndicators(db, pair.id);
   const result = await forecastEngine.predict({
-    pairId,
+    pairId: pair.id,
     horizon: "24h",
     close,
     indicators,
   });
 
+  // Без ATR прогноз вырожденный (flat/0, см. RulesForecastEngine) — объяснять
+  // там нечего, и не стоит платить за LLM-вызов ради "нет данных".
+  const explained =
+    indicators.atr14 === undefined
+      ? null
+      : await explainer
+          .explain({
+            base: pair.baseCode,
+            quote: pair.quoteCode,
+            direction: result.direction,
+            technicalScore: (result.features as { technicalScore: number }).technicalScore,
+            close,
+            targetLow: result.targetLow,
+            targetHigh: result.targetHigh,
+            indicators,
+          })
+          .catch((err: Error) => {
+            console.error(`[worker] explainer для ${pair.id} упал:`, err.message);
+            return null;
+          });
+
   await db.forecast.create({
     data: {
-      pairId,
+      pairId: pair.id,
       horizon: "24h",
       direction: result.direction,
       confidence: result.confidence,
@@ -203,6 +226,8 @@ async function maybeGenerateForecast(
       // Prisma (ForecastEngine не должен знать о хранилище), поэтому приводим
       // тип здесь, на границе записи в БД, а не в domain-типе.
       features: result.features as Prisma.InputJsonValue,
+      explanation: explained?.explanation,
+      ...(explained ? { drivers: explained.drivers as Prisma.InputJsonValue } : {}),
     },
   });
 }
