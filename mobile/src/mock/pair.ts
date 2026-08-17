@@ -1,4 +1,4 @@
-import type { PairSnapshot } from '../types'
+import type { PairSnapshot } from "../types";
 
 /**
  * Моковый снимок пары USD/KZT — значения ровно из хендофф-макета (§4.3).
@@ -9,15 +9,15 @@ import type { PairSnapshot } from '../types'
  * бэкенд ещё не считает (этапы 3–4 роадмапа) и здесь по-прежнему заглушка.
  */
 const usdKzt: PairSnapshot = {
-  id: 'USD-KZT',
-  base: 'USD',
-  quote: 'KZT',
-  symbol: '₸',
+  id: "USD-KZT",
+  base: "USD",
+  quote: "KZT",
+  symbol: "₸",
   rate: 511.4,
   deltaPct: 0.6,
-  direction: 'up',
-  quoteTime: '11:32',
-  officialLine: 'НБ РК: 511.2 ₸ на 28.07',
+  direction: "up",
+  quoteTime: "11:32",
+  officialLine: "НБ РК: 511.2 ₸ на 28.07",
   candles: [
     { o: 505.2, h: 506.8, l: 504.5, c: 506.1 },
     { o: 506.1, h: 507.5, l: 505.6, c: 505.9 },
@@ -39,63 +39,94 @@ const usdKzt: PairSnapshot = {
     { o: 511.7, h: 512.4, l: 511.1, c: 511.4 },
   ],
   forecast: {
-    direction: 'up',
-    directionLabel: 'Рост',
+    direction: "up",
+    directionLabel: "Рост",
     targetLow: 512,
     targetHigh: 515,
     confidence: 60,
     explanation:
-      'Тренд последних дней поддержан решением НБ РК по ставке и слабостью доллара после риторики ФРС. Признаков резкого движения не зафиксировано.',
+      "Тренд последних дней поддержан решением НБ РК по ставке и слабостью доллара после риторики ФРС. Признаков резкого движения не зафиксировано.",
     drivers: [
-      { category: 'technical', text: 'Техника: цена выше EMA50' },
-      { category: 'news', text: 'Новость: НБ РК повысил ставку' },
-      { category: 'regulator', text: 'Регулятор: заседание ФРС' },
+      { category: "technical", text: "Техника: цена выше EMA50" },
+      { category: "news", text: "Новость: НБ РК повысил ставку" },
+      { category: "regulator", text: "Регулятор: заседание ФРС" },
     ],
     enginePairAccuracyPct: 61,
     enginePairWindowDays: 90,
   },
   indicators: [
-    { name: 'RSI (14)', value: '68', interp: 'Перекуплен', tone: 'warn' },
-    { name: 'MACD', value: '+1.2', interp: 'Бычий крест', tone: 'up' },
-    { name: 'ATR (14)', value: '3.8 ₸', interp: 'Повышенная волатильность', tone: 'neutral' },
-    { name: 'EMA 50/200', value: 'Выше EMA50', interp: 'Восходящий тренд', tone: 'up' },
+    { name: "RSI (14)", value: "68", interp: "Перекуплен", tone: "warn" },
+    { name: "MACD", value: "+1.2", interp: "Бычий крест", tone: "up" },
+    {
+      name: "ATR (14)",
+      value: "3.8 ₸",
+      interp: "Повышенная волатильность",
+      tone: "neutral",
+    },
+    {
+      name: "EMA 50/200",
+      value: "Выше EMA50",
+      interp: "Восходящий тренд",
+      tone: "up",
+    },
   ],
   news: [
     {
-      source: 'НБ РК',
-      time: '28.07, 09:12',
-      title: 'Нацбанк повысил базовую ставку до 15.75%',
-      tag: 'Влияет на USD/KZT',
+      source: "НБ РК",
+      time: "28.07, 09:12",
+      title: "Нацбанк повысил базовую ставку до 15.75%",
+      tag: "Влияет на USD/KZT",
     },
     {
-      source: 'Reuters',
-      time: '27.07, 22:40',
-      title: 'ФРС сохранила ставку, риторика жёстче ожиданий',
-      tag: 'Влияет на USD/KZT',
+      source: "Reuters",
+      time: "27.07, 22:40",
+      title: "ФРС сохранила ставку, риторика жёстче ожиданий",
+      tag: "Влияет на USD/KZT",
     },
     {
-      source: 'Минфин РК',
-      time: '27.07, 16:05',
-      title: 'Увеличены объёмы покупки валюты на бирже',
-      tag: 'Влияет на USD/KZT',
+      source: "Минфин РК",
+      time: "27.07, 16:05",
+      title: "Увеличены объёмы покупки валюты на бирже",
+      tag: "Влияет на USD/KZT",
     },
   ],
   accuracy: {
     hitRatePct: 61,
     total: 148,
     windowDays: 90,
-    outcomes: [true, true, true, false, true, true, false, true, true, true, true, false, true, true, true, false, true, true, true, true],
+    outcomes: [
+      true,
+      true,
+      true,
+      false,
+      true,
+      true,
+      false,
+      true,
+      true,
+      true,
+      true,
+      false,
+      true,
+      true,
+      true,
+      false,
+      true,
+      true,
+      true,
+      true,
+    ],
   },
-}
+};
 
 const BY_ID: Record<string, PairSnapshot> = {
-  'USD-KZT': usdKzt,
-}
+  "USD-KZT": usdKzt,
+};
 
 /**
  * Возвращает снимок пары по id роута (/pairs/[id]).
  * Пока известна только USD-KZT — на неё же откатываемся по умолчанию.
  */
 export function getPairSnapshot(id?: string): PairSnapshot {
-  return (id && BY_ID[id]) || usdKzt
+  return (id && BY_ID[id]) || usdKzt;
 }

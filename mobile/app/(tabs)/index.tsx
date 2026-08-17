@@ -1,13 +1,20 @@
-import { useEffect, useState } from 'react'
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native'
-import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { useRouter } from 'expo-router'
-import { fontFamily, spacing, useTheme } from '../../src/theme'
-import { getCandles, getPairs, getQuote } from '../../src/api'
-import { deriveDelta, pairFlags, sparkPoints } from '../../src/lib/market'
-import { getTodaySummary } from '../../src/mock/watchlist'
-import { Card, GearIcon, IconButton, PairRow, Text, TodayCard } from '../../src/components'
-import type { WatchlistPair } from '../../src/types'
+import { useEffect, useState } from "react";
+import { Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useRouter } from "expo-router";
+import { fontFamily, spacing, useTheme } from "../../src/theme";
+import { getCandles, getPairs, getQuote } from "../../src/api";
+import { deriveDelta, pairFlags, sparkPoints } from "../../src/lib/market";
+import { getTodaySummary } from "../../src/mock/watchlist";
+import {
+  Card,
+  GearIcon,
+  IconButton,
+  PairRow,
+  Text,
+  TodayCard,
+} from "../../src/components";
+import type { WatchlistPair } from "../../src/types";
 
 /**
  * Главный экран / watchlist (4.2). Порядок сверху вниз: карточка «Сегодня»
@@ -15,52 +22,60 @@ import type { WatchlistPair } from '../../src/types'
  * ScrollView, поэтому «прилипает» сверху.
  */
 export default function WatchlistScreen() {
-  const { colors } = useTheme()
-  const insets = useSafeAreaInsets()
-  const router = useRouter()
+  const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
+  const router = useRouter();
 
   // «Сегодня» — карточка с прогнозом, бэкенд его ещё не считает (мок, см.
   // src/mock/watchlist.ts). Список пар ниже — реальные данные с бэкенда.
-  const today = getTodaySummary()
-  const [pairs, setPairs] = useState<WatchlistPair[]>([])
+  const today = getTodaySummary();
+  const [pairs, setPairs] = useState<WatchlistPair[]>([]);
 
   useEffect(() => {
-    let cancelled = false
+    let cancelled = false;
 
     async function load() {
-      const list = await getPairs()
+      const list = await getPairs();
       const rows = await Promise.all(
         list.map(async (p): Promise<WatchlistPair> => {
-          const [quote, candles] = await Promise.all([getQuote(p.id), getCandles(p.id, 7)])
-          const { deltaPct, direction } = deriveDelta(quote.rate, candles)
+          const [quote, candles] = await Promise.all([
+            getQuote(p.id),
+            getCandles(p.id, 7),
+          ]);
+          const { deltaPct, direction } = deriveDelta(quote.rate, candles);
           return {
             id: p.id,
             flags: pairFlags(p.base, p.quote),
             base: p.base,
             quote: p.quote,
             rate: quote.rate,
-            symbol: '₸',
+            symbol: "₸",
             direction,
             deltaPct,
             spark: sparkPoints(candles),
-          }
+          };
         }),
-      )
-      if (!cancelled) setPairs(rows)
+      );
+      if (!cancelled) setPairs(rows);
     }
 
-    load().catch((err) => console.error('[watchlist] не удалось загрузить пары', err))
+    load().catch((err) =>
+      console.error("[watchlist] не удалось загрузить пары", err),
+    );
     return () => {
-      cancelled = true
-    }
-  }, [])
+      cancelled = true;
+    };
+  }, []);
 
   return (
     <View style={[styles.screen, { backgroundColor: colors.bgBase }]}>
       <View
         style={[
           styles.header,
-          { paddingTop: insets.top + spacing.sm, borderBottomColor: colors.borderSubtle },
+          {
+            paddingTop: insets.top + spacing.sm,
+            borderBottomColor: colors.borderSubtle,
+          },
         ]}
       >
         <Text variant="caption" color={colors.textTertiary}>
@@ -84,7 +99,10 @@ export default function WatchlistScreen() {
           <Text style={styles.sectionLabel} color={colors.textTertiary}>
             СЕГОДНЯ
           </Text>
-          <TodayCard today={today} onPress={() => router.push(`/pairs/${today.pairId}`)} />
+          <TodayCard
+            today={today}
+            onPress={() => router.push(`/pairs/${today.pairId}`)}
+          />
         </View>
 
         <View style={styles.pairsHeader}>
@@ -95,7 +113,11 @@ export default function WatchlistScreen() {
         <View style={styles.pairsWrap}>
           <Card padded={false} style={styles.pairsCard}>
             {pairs.length === 0 && (
-              <Text variant="body" color={colors.textTertiary} style={styles.loading}>
+              <Text
+                variant="body"
+                color={colors.textTertiary}
+                style={styles.loading}
+              >
                 Загрузка курсов…
               </Text>
             )}
@@ -135,15 +157,15 @@ export default function WatchlistScreen() {
         </View>
       </ScrollView>
     </View>
-  )
+  );
 }
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.md,
     borderBottomWidth: 1,
@@ -163,22 +185,22 @@ const styles = StyleSheet.create({
     paddingTop: spacing.xl - 4, // 20
   },
   pairsWrap: { paddingHorizontal: spacing.lg },
-  pairsCard: { overflow: 'hidden' },
-  loading: { paddingVertical: spacing.lg, textAlign: 'center' },
+  pairsCard: { overflow: "hidden" },
+  loading: { paddingVertical: spacing.lg, textAlign: "center" },
   addWrap: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
   },
   addBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     gap: spacing.sm,
     paddingVertical: 14,
     borderRadius: 12,
     borderWidth: 1,
-    borderStyle: 'dashed',
+    borderStyle: "dashed",
   },
   addPlus: { fontFamily: fontFamily.semibold, fontSize: 17, lineHeight: 20 },
   addLabel: { fontFamily: fontFamily.semibold, fontSize: 15 },
-})
+});

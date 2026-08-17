@@ -1,20 +1,20 @@
-import { useEffect } from 'react'
-import { Stack } from 'expo-router'
-import { StatusBar } from 'expo-status-bar'
-import { SafeAreaProvider } from 'react-native-safe-area-context'
-import * as SplashScreen from 'expo-splash-screen'
+import { useEffect } from "react";
+import { Stack } from "expo-router";
+import { StatusBar } from "expo-status-bar";
+import { SafeAreaProvider } from "react-native-safe-area-context";
+import * as SplashScreen from "expo-splash-screen";
 import {
   Inter_400Regular,
   Inter_500Medium,
   Inter_600SemiBold,
   Inter_700Bold,
   useFonts,
-} from '@expo-google-fonts/inter'
-import { darkColors } from '../src/theme'
+} from "@expo-google-fonts/inter";
+import { darkColors } from "../src/theme";
 
 // Держим splash, пока не загрузятся шрифты — иначе первый кадр
 // отрисуется системным шрифтом и «прыгнет» на Inter.
-SplashScreen.preventAutoHideAsync()
+SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
@@ -22,13 +22,13 @@ export default function RootLayout() {
     Inter_500Medium,
     Inter_600SemiBold,
     Inter_700Bold,
-  })
+  });
 
   useEffect(() => {
-    if (fontsLoaded) SplashScreen.hideAsync()
-  }, [fontsLoaded])
+    if (fontsLoaded) SplashScreen.hideAsync();
+  }, [fontsLoaded]);
 
-  if (!fontsLoaded) return null
+  if (!fontsLoaded) return null;
 
   return (
     <SafeAreaProvider>
@@ -42,5 +42,5 @@ export default function RootLayout() {
         }}
       />
     </SafeAreaProvider>
-  )
+  );
 }

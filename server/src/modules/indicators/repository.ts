@@ -1,5 +1,5 @@
 import type { PrismaClient } from "@prisma/client";
-import { IndicatorSnapshot } from "../forecast/types"
+import { IndicatorSnapshot } from "../forecast/types";
 
 export async function getLatestIndicators(
   db: PrismaClient,

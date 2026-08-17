@@ -1,6 +1,6 @@
-import { ForecastEngine, ForecastInput, ForecastResult} from "./types";
-import { computeTechnicalScore } from "./compute"
-import { forecastConfig } from "./config"
+import { ForecastEngine, ForecastInput, ForecastResult } from "./types";
+import { computeTechnicalScore } from "./compute";
+import { forecastConfig } from "./config";
 
 export class RulesForecastEngine implements ForecastEngine {
   readonly version = "rules-v1";

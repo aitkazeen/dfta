@@ -1,4 +1,4 @@
-import type { TextStyle } from 'react-native'
+import type { TextStyle } from "react-native";
 
 /**
  * Отступы и радиусы — из брифа §3.3. Базовая единица 4.
@@ -13,7 +13,7 @@ export const spacing = {
   xl: 24,
   xxl: 32,
   xxxl: 48,
-} as const
+} as const;
 
 export const radius = {
   sm: 8, // бейджи, чипы, табы
@@ -21,7 +21,7 @@ export const radius = {
   lg: 16, // карточки
   xl: 24, // bottom sheet
   full: 999, // пилюли, круглые кнопки
-} as const
+} as const;
 
 /**
  * Имена шрифтовых файлов Inter, как их регистрирует @expo-google-fonts/inter.
@@ -29,11 +29,11 @@ export const radius = {
  * на системный, но верстка не сломается.
  */
 export const fontFamily = {
-  regular: 'Inter_400Regular',
-  medium: 'Inter_500Medium',
-  semibold: 'Inter_600SemiBold',
-  bold: 'Inter_700Bold',
-} as const
+  regular: "Inter_400Regular",
+  medium: "Inter_500Medium",
+  semibold: "Inter_600SemiBold",
+  bold: "Inter_700Bold",
+} as const;
 
 /**
  * Типографическая шкала из брифа §3.2. Каждый стиль — размер, интерлиньяж,
@@ -46,8 +46,13 @@ export const typography = {
   title: { fontFamily: fontFamily.semibold, fontSize: 17, lineHeight: 22 },
   body: { fontFamily: fontFamily.regular, fontSize: 15, lineHeight: 22 },
   label: { fontFamily: fontFamily.medium, fontSize: 13, lineHeight: 18 },
-  caption: { fontFamily: fontFamily.medium, fontSize: 11, lineHeight: 15, letterSpacing: 0.3 },
+  caption: {
+    fontFamily: fontFamily.medium,
+    fontSize: 11,
+    lineHeight: 15,
+    letterSpacing: 0.3,
+  },
   monoNum: { fontFamily: fontFamily.medium, fontSize: 15, lineHeight: 20 },
-} satisfies Record<string, TextStyle>
+} satisfies Record<string, TextStyle>;
 
-export type TypographyVariant = keyof typeof typography
+export type TypographyVariant = keyof typeof typography;

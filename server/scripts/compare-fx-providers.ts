@@ -38,105 +38,133 @@
  *   живой запрос из этого окружения ни разу не прошёл, ECONNRESET/AbortError).
  */
 
-type DailyRates = Map<string, number> // "YYYY-MM-DD" -> курс
+type DailyRates = Map<string, number>; // "YYYY-MM-DD" -> курс
 
-const RANGE_DAYS = Number(process.env.FX_RANGE_DAYS ?? 730) // ~2 года, бриф §0
-const PROVIDER_CHUNK_DAYS = Number(process.env.FX_CHUNK_DAYS ?? 90) // на случай лимита диапазона за запрос
-const NBK_SAMPLE_STEP_DAYS = Number(process.env.FX_NBK_SAMPLE_STEP_DAYS ?? 7) // НБ РК отдаёт только по одной дате за раз — сэмплируем, а не дёргаем все 730 дней
-const FETCH_TIMEOUT_MS = 10_000
-const FETCH_RETRIES = 2
+const RANGE_DAYS = Number(process.env.FX_RANGE_DAYS ?? 730); // ~2 года, бриф §0
+const PROVIDER_CHUNK_DAYS = Number(process.env.FX_CHUNK_DAYS ?? 90); // на случай лимита диапазона за запрос
+const NBK_SAMPLE_STEP_DAYS = Number(process.env.FX_NBK_SAMPLE_STEP_DAYS ?? 7); // НБ РК отдаёт только по одной дате за раз — сэмплируем, а не дёргаем все 730 дней
+const FETCH_TIMEOUT_MS = 10_000;
+const FETCH_RETRIES = 2;
 
-const FOREXRATEAPI_KEY = process.env.FOREXRATEAPI_KEY
-const UNIRATEAPI_KEY = process.env.UNIRATEAPI_KEY
-const UNIRATEAPI_BASE = process.env.UNIRATEAPI_BASE ?? 'https://api.unirateapi.com/api'
+const FOREXRATEAPI_KEY = process.env.FOREXRATEAPI_KEY;
+const UNIRATEAPI_KEY = process.env.UNIRATEAPI_KEY;
+const UNIRATEAPI_BASE =
+  process.env.UNIRATEAPI_BASE ?? "https://api.unirateapi.com/api";
 
 // --- Даты -------------------------------------------------------------
 
 function addDays(date: Date, days: number): Date {
-  const d = new Date(date)
-  d.setUTCDate(d.getUTCDate() + days)
-  return d
+  const d = new Date(date);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d;
 }
 
 function toIso(date: Date): string {
-  return date.toISOString().slice(0, 10) // YYYY-MM-DD
+  return date.toISOString().slice(0, 10); // YYYY-MM-DD
 }
 
 function toRuDate(date: Date): string {
-  const dd = String(date.getUTCDate()).padStart(2, '0')
-  const mm = String(date.getUTCMonth() + 1).padStart(2, '0')
-  return `${dd}.${mm}.${date.getUTCFullYear()}` // DD.MM.YYYY — НБ РК
+  const dd = String(date.getUTCDate()).padStart(2, "0");
+  const mm = String(date.getUTCMonth() + 1).padStart(2, "0");
+  return `${dd}.${mm}.${date.getUTCFullYear()}`; // DD.MM.YYYY — НБ РК
 }
 
 /** Разбивает диапазон на чанки по chunkDays — на случай лимита провайдера на охват одного запроса. */
-function chunkRange(start: Date, end: Date, chunkDays: number): Array<{ from: Date; to: Date }> {
-  const chunks: Array<{ from: Date; to: Date }> = []
-  let cursor = start
+function chunkRange(
+  start: Date,
+  end: Date,
+  chunkDays: number,
+): Array<{ from: Date; to: Date }> {
+  const chunks: Array<{ from: Date; to: Date }> = [];
+  let cursor = start;
   while (cursor < end) {
-    const chunkEnd = addDays(cursor, chunkDays) < end ? addDays(cursor, chunkDays) : end
-    chunks.push({ from: cursor, to: chunkEnd })
-    cursor = addDays(chunkEnd, 1)
+    const chunkEnd =
+      addDays(cursor, chunkDays) < end ? addDays(cursor, chunkDays) : end;
+    chunks.push({ from: cursor, to: chunkEnd });
+    cursor = addDays(chunkEnd, 1);
   }
-  return chunks
+  return chunks;
 }
 
 // --- HTTP с таймаутом и ретраем (архитектурное правило 8) -------------
 
-async function fetchWithRetry(url: string, retries = FETCH_RETRIES): Promise<string> {
+async function fetchWithRetry(
+  url: string,
+  retries = FETCH_RETRIES,
+): Promise<string> {
   for (let attempt = 0; attempt <= retries; attempt++) {
-    const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
     try {
-      const res = await fetch(url, { signal: controller.signal })
-      clearTimeout(timeout)
-      if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`)
-      return await res.text()
+      const res = await fetch(url, { signal: controller.signal });
+      clearTimeout(timeout);
+      if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
+      return await res.text();
     } catch (err) {
-      clearTimeout(timeout)
-      if (attempt === retries) throw err
-      await new Promise((r) => setTimeout(r, 500 * (attempt + 1)))
+      clearTimeout(timeout);
+      if (attempt === retries) throw err;
+      await new Promise((r) => setTimeout(r, 500 * (attempt + 1)));
     }
   }
-  throw new Error('unreachable')
+  throw new Error("unreachable");
 }
 
 function sleep(ms: number): Promise<void> {
-  return new Promise((r) => setTimeout(r, ms))
+  return new Promise((r) => setTimeout(r, ms));
 }
 
 // --- ForexRateAPI -------------------------------------------------------
 
 function isToday(date: Date): boolean {
-  const now = new Date()
-  return toIso(date) === toIso(new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())))
+  const now = new Date();
+  return (
+    toIso(date) ===
+    toIso(
+      new Date(
+        Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()),
+      ),
+    )
+  );
 }
 
 /** Один день через /v1/{date} — обходит ограничение free-тира на ширину /timeframe.
  *  За сегодня исторический эндпоинт отказывает ("Did you mean /yesterday?") — берём /latest. */
-async function fetchForexRateApiSingleDate(base: string, quote: string, date: Date): Promise<number | null> {
-  const path = isToday(date) ? 'latest' : toIso(date)
-  const url = `https://api.forexrateapi.com/v1/${path}?api_key=${FOREXRATEAPI_KEY}&base=${base}&currencies=${quote}`
-  const body = await fetchWithRetry(url)
-  const json = JSON.parse(body)
-  if (!json.success) throw new Error(`ForexRateAPI: ${JSON.stringify(json.error ?? json)}`)
-  return typeof json.rates?.[quote] === 'number' ? json.rates[quote] : null
+async function fetchForexRateApiSingleDate(
+  base: string,
+  quote: string,
+  date: Date,
+): Promise<number | null> {
+  const path = isToday(date) ? "latest" : toIso(date);
+  const url = `https://api.forexrateapi.com/v1/${path}?api_key=${FOREXRATEAPI_KEY}&base=${base}&currencies=${quote}`;
+  const body = await fetchWithRetry(url);
+  const json = JSON.parse(body);
+  if (!json.success)
+    throw new Error(`ForexRateAPI: ${JSON.stringify(json.error ?? json)}`);
+  return typeof json.rates?.[quote] === "number" ? json.rates[quote] : null;
 }
 
 /** Сэмплирует посуточно — медленнее, но укладывается в лимит запросов free-тира. */
-async function fetchForexRateApiSampled(base: string, quote: string, start: Date, end: Date): Promise<DailyRates> {
-  const out: DailyRates = new Map()
-  let cursor = start
+async function fetchForexRateApiSampled(
+  base: string,
+  quote: string,
+  start: Date,
+  end: Date,
+): Promise<DailyRates> {
+  const out: DailyRates = new Map();
+  let cursor = start;
   while (cursor <= end) {
     try {
-      const rate = await fetchForexRateApiSingleDate(base, quote, cursor)
-      if (rate != null) out.set(toIso(cursor), rate)
+      const rate = await fetchForexRateApiSingleDate(base, quote, cursor);
+      if (rate != null) out.set(toIso(cursor), rate);
     } catch (err) {
-      console.warn(`  ForexRateAPI ${base}/${quote} ${toIso(cursor)}: ${(err as Error).message}`)
+      console.warn(
+        `  ForexRateAPI ${base}/${quote} ${toIso(cursor)}: ${(err as Error).message}`,
+      );
     }
-    await sleep(200)
-    cursor = addDays(cursor, NBK_SAMPLE_STEP_DAYS)
+    await sleep(200);
+    cursor = addDays(cursor, NBK_SAMPLE_STEP_DAYS);
   }
-  return out
+  return out;
 }
 
 /**
@@ -146,30 +174,37 @@ async function fetchForexRateApiSampled(base: string, quote: string, start: Date
  * таком отказе переключаемся на посуточный сэмплинг вместо того, чтобы
  * просто падать.
  */
-async function fetchForexRateApiRange(base: string, quote: string, start: Date, end: Date): Promise<DailyRates> {
-  const out: DailyRates = new Map()
+async function fetchForexRateApiRange(
+  base: string,
+  quote: string,
+  start: Date,
+  end: Date,
+): Promise<DailyRates> {
+  const out: DailyRates = new Map();
   for (const { from, to } of chunkRange(start, end, PROVIDER_CHUNK_DAYS)) {
     const url =
       `https://api.forexrateapi.com/v1/timeframe?api_key=${FOREXRATEAPI_KEY}` +
-      `&base=${base}&currencies=${quote}&start_date=${toIso(from)}&end_date=${toIso(to)}`
-    const body = await fetchWithRetry(url)
-    const json = JSON.parse(body)
+      `&base=${base}&currencies=${quote}&start_date=${toIso(from)}&end_date=${toIso(to)}`;
+    const body = await fetchWithRetry(url);
+    const json = JSON.parse(body);
     if (!json.success) {
-      const message = JSON.stringify(json.error ?? json)
-      if (message.includes('paid plan')) {
+      const message = JSON.stringify(json.error ?? json);
+      if (message.includes("paid plan")) {
         console.log(
-          '  ForexRateAPI: /timeframe недоступен на free-тире для такого диапазона — ' +
-            'переключаюсь на посуточные запросы (медленнее, но укладывается в лимит).',
-        )
-        return fetchForexRateApiSampled(base, quote, start, end)
+          "  ForexRateAPI: /timeframe недоступен на free-тире для такого диапазона — " +
+            "переключаюсь на посуточные запросы (медленнее, но укладывается в лимит).",
+        );
+        return fetchForexRateApiSampled(base, quote, start, end);
       }
-      throw new Error(`ForexRateAPI: ${message}`)
+      throw new Error(`ForexRateAPI: ${message}`);
     }
-    for (const [date, rates] of Object.entries<Record<string, number>>(json.rates)) {
-      if (typeof rates[quote] === 'number') out.set(date, rates[quote])
+    for (const [date, rates] of Object.entries<Record<string, number>>(
+      json.rates,
+    )) {
+      if (typeof rates[quote] === "number") out.set(date, rates[quote]);
     }
   }
-  return out
+  return out;
 }
 
 // --- UniRateAPI -----------------------------------------------------------
@@ -180,12 +215,15 @@ async function fetchForexRateApiRange(base: string, quote: string, start: Date, 
  * прежде чем ругаться на отсутствие исторического эндпоинта.
  */
 async function pingUniRateApi(base: string, quote: string): Promise<number> {
-  const url = `${UNIRATEAPI_BASE}/rates?api_key=${UNIRATEAPI_KEY}&from=${base}&to=${quote}`
-  const body = await fetchWithRetry(url)
-  const json = JSON.parse(body)
-  const rate = json.rate ?? json.result ?? json[quote]
-  if (typeof rate !== 'number') throw new Error(`UniRateAPI: не нашёл курс в ответе — ${body.slice(0, 300)}`)
-  return rate
+  const url = `${UNIRATEAPI_BASE}/rates?api_key=${UNIRATEAPI_KEY}&from=${base}&to=${quote}`;
+  const body = await fetchWithRetry(url);
+  const json = JSON.parse(body);
+  const rate = json.rate ?? json.result ?? json[quote];
+  if (typeof rate !== "number")
+    throw new Error(
+      `UniRateAPI: не нашёл курс в ответе — ${body.slice(0, 300)}`,
+    );
+  return rate;
 }
 
 /**
@@ -197,149 +235,221 @@ async function pingUniRateApi(base: string, quote: string): Promise<number> {
  * же личном кабинете) и пришли сюда пример запроса — допишу по нему.
  */
 // eslint-disable-next-line @typescript-eslint/no-unused-vars -- заглушка на будущее, см. комментарий выше
-async function fetchUniRateApiRange(_base: string, _quote: string, _start: Date, _end: Date): Promise<DailyRates> {
+async function fetchUniRateApiRange(
+  _base: string,
+  _quote: string,
+  _start: Date,
+  _end: Date,
+): Promise<DailyRates> {
   throw new Error(
-    'Исторический эндпоинт UniRateAPI не подтверждён (см. комментарий у функции). ' +
-      'Открой Swagger в личном кабинете, найди раздел с историческими/timeseries данными и пришли пример запроса.',
-  )
+    "Исторический эндпоинт UniRateAPI не подтверждён (см. комментарий у функции). " +
+      "Открой Swagger в личном кабинете, найди раздел с историческими/timeseries данными и пришли пример запроса.",
+  );
 }
 
 // --- НБ РК — единственный источник истины (USD/KZT, EUR/KZT, RUB/KZT) -----
 
 /** Курс KZT за 1 единицу валюты по данным НБ РК на конкретную дату (один запрос = один день). */
-async function fetchNbkOneDate(currency: string, date: Date): Promise<number | null> {
-  const url = `https://nationalbank.kz/rss/get_rates.cfm?fdate=${toRuDate(date)}`
-  const xml = await fetchWithRetry(url)
+async function fetchNbkOneDate(
+  currency: string,
+  date: Date,
+): Promise<number | null> {
+  const url = `https://nationalbank.kz/rss/get_rates.cfm?fdate=${toRuDate(date)}`;
+  const xml = await fetchWithRetry(url);
   // <item> перед <title> ещё содержит <fullname>...</fullname> (в отличие от rates_all.xml) —
   // поэтому между <item> и <title> допускаем что угодно, а не только пробелы.
   const re = new RegExp(
     `<item>[\\s\\S]*?<title>${currency}<\\/title>[\\s\\S]*?<description>([\\d.]+)<\\/description>\\s*<quant>(\\d+)<\\/quant>`,
-  )
-  const m = xml.match(re)
-  if (!m) return null
-  const [, description, quant] = m
-  return parseFloat(description) / Number(quant)
+  );
+  const m = xml.match(re);
+  if (!m) return null;
+  const [, description, quant] = m;
+  return parseFloat(description) / Number(quant);
 }
 
 /** Сэмплирует НБ РК раз в NBK_SAMPLE_STEP_DAYS дней — а не все 730, из вежливости к чужому серверу без API. */
-async function fetchNbkSampledRange(currency: string, start: Date, end: Date): Promise<DailyRates> {
-  const out: DailyRates = new Map()
-  let cursor = start
+async function fetchNbkSampledRange(
+  currency: string,
+  start: Date,
+  end: Date,
+): Promise<DailyRates> {
+  const out: DailyRates = new Map();
+  let cursor = start;
   while (cursor <= end) {
     try {
-      const rate = await fetchNbkOneDate(currency, cursor)
-      if (rate != null) out.set(toIso(cursor), rate)
+      const rate = await fetchNbkOneDate(currency, cursor);
+      if (rate != null) out.set(toIso(cursor), rate);
     } catch (err) {
-      console.warn(`  НБ РК ${currency} ${toIso(cursor)}: ${(err as Error).message}`)
+      console.warn(
+        `  НБ РК ${currency} ${toIso(cursor)}: ${(err as Error).message}`,
+      );
     }
-    await sleep(200) // не долбим чужой сервер без API впритык
-    cursor = addDays(cursor, NBK_SAMPLE_STEP_DAYS)
+    await sleep(200); // не долбим чужой сервер без API впритык
+    cursor = addDays(cursor, NBK_SAMPLE_STEP_DAYS);
   }
-  return out
+  return out;
 }
 
 // --- Сравнение ------------------------------------------------------------
 
 type Comparison = {
-  matchedDays: number
-  meanAbsPct: number
-  maxAbsPct: number
-  worst: Array<{ date: string; provider: number; official: number; diffPct: number }>
-}
+  matchedDays: number;
+  meanAbsPct: number;
+  maxAbsPct: number;
+  worst: Array<{
+    date: string;
+    provider: number;
+    official: number;
+    diffPct: number;
+  }>;
+};
 
 function compare(provider: DailyRates, official: DailyRates): Comparison {
-  const diffs: Array<{ date: string; provider: number; official: number; diffPct: number }> = []
+  const diffs: Array<{
+    date: string;
+    provider: number;
+    official: number;
+    diffPct: number;
+  }> = [];
   for (const [date, officialRate] of official) {
-    const providerRate = provider.get(date)
-    if (providerRate == null) continue
-    const diffPct = (Math.abs(providerRate - officialRate) / officialRate) * 100
-    diffs.push({ date, provider: providerRate, official: officialRate, diffPct })
+    const providerRate = provider.get(date);
+    if (providerRate == null) continue;
+    const diffPct =
+      (Math.abs(providerRate - officialRate) / officialRate) * 100;
+    diffs.push({
+      date,
+      provider: providerRate,
+      official: officialRate,
+      diffPct,
+    });
   }
-  const matchedDays = diffs.length
-  const meanAbsPct = matchedDays ? diffs.reduce((s, d) => s + d.diffPct, 0) / matchedDays : NaN
-  const maxAbsPct = matchedDays ? Math.max(...diffs.map((d) => d.diffPct)) : NaN
-  const worst = [...diffs].sort((a, b) => b.diffPct - a.diffPct).slice(0, 5)
-  return { matchedDays, meanAbsPct, maxAbsPct, worst }
+  const matchedDays = diffs.length;
+  const meanAbsPct = matchedDays
+    ? diffs.reduce((s, d) => s + d.diffPct, 0) / matchedDays
+    : NaN;
+  const maxAbsPct = matchedDays
+    ? Math.max(...diffs.map((d) => d.diffPct))
+    : NaN;
+  const worst = [...diffs].sort((a, b) => b.diffPct - a.diffPct).slice(0, 5);
+  return { matchedDays, meanAbsPct, maxAbsPct, worst };
 }
 
 function printComparison(label: string, c: Comparison) {
-  console.log(`\n  ${label}`)
+  console.log(`\n  ${label}`);
   if (c.matchedDays === 0) {
-    console.log('    Нет пересекающихся дат — нечего сравнивать.')
-    return
+    console.log("    Нет пересекающихся дат — нечего сравнивать.");
+    return;
   }
-  console.log(`    Совпавших дат: ${c.matchedDays}`)
-  console.log(`    Среднее расхождение: ${c.meanAbsPct.toFixed(3)}%`)
-  console.log(`    Максимальное расхождение: ${c.maxAbsPct.toFixed(3)}%`)
+  console.log(`    Совпавших дат: ${c.matchedDays}`);
+  console.log(`    Среднее расхождение: ${c.meanAbsPct.toFixed(3)}%`);
+  console.log(`    Максимальное расхождение: ${c.maxAbsPct.toFixed(3)}%`);
   if (c.maxAbsPct > 1) {
-    console.log('    Худшие дни:')
+    console.log("    Худшие дни:");
     for (const w of c.worst) {
       console.log(
         `      ${w.date}  провайдер=${w.provider.toFixed(4)}  официально=${w.official.toFixed(4)}  Δ=${w.diffPct.toFixed(2)}%`,
-      )
+      );
     }
   }
 }
 
 // --- Основной сценарий ------------------------------------------------
 
-type Pair = { base: string; quote: string; label: string; official: (start: Date, end: Date) => Promise<DailyRates> }
+type Pair = {
+  base: string;
+  quote: string;
+  label: string;
+  official: (start: Date, end: Date) => Promise<DailyRates>;
+};
 
 async function main() {
-  const now = new Date()
-  const end = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()))
-  const start = addDays(end, -RANGE_DAYS)
+  const now = new Date();
+  const end = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()),
+  );
+  const start = addDays(end, -RANGE_DAYS);
 
-  console.log(`Сверка провайдеров за ${toIso(start)} … ${toIso(end)} (${RANGE_DAYS} дней)`)
+  console.log(
+    `Сверка провайдеров за ${toIso(start)} … ${toIso(end)} (${RANGE_DAYS} дней)`,
+  );
 
   if (!FOREXRATEAPI_KEY && !UNIRATEAPI_KEY) {
     console.error(
-      '\nНи FOREXRATEAPI_KEY, ни UNIRATEAPI_KEY не заданы в server/.env — нечего сверять.\n' +
-        'Зарегистрируй бесплатный ключ хотя бы у одного провайдера (см. docs/architecture-roadmap.md §3.1) и добавь его в server/.env.',
-    )
-    process.exit(1)
+      "\nНи FOREXRATEAPI_KEY, ни UNIRATEAPI_KEY не заданы в server/.env — нечего сверять.\n" +
+        "Зарегистрируй бесплатный ключ хотя бы у одного провайдера (см. docs/architecture-roadmap.md §3.1) и добавь его в server/.env.",
+    );
+    process.exit(1);
   }
 
   if (UNIRATEAPI_KEY) {
-    console.log('\nПроверяю ключ UniRateAPI (единственный подтверждённый эндпоинт — текущий курс)...')
+    console.log(
+      "\nПроверяю ключ UniRateAPI (единственный подтверждённый эндпоинт — текущий курс)...",
+    );
     try {
-      const rate = await pingUniRateApi('USD', 'KZT')
-      console.log(`  Ключ рабочий. Текущий USD/KZT по UniRateAPI: ${rate}`)
+      const rate = await pingUniRateApi("USD", "KZT");
+      console.log(`  Ключ рабочий. Текущий USD/KZT по UniRateAPI: ${rate}`);
     } catch (err) {
-      console.error(`  UniRateAPI: ключ не проверен — ${(err as Error).message}`)
+      console.error(
+        `  UniRateAPI: ключ не проверен — ${(err as Error).message}`,
+      );
     }
     console.log(
-      '  Исторический эндпоинт не подтверждён — сравнение по датам для UniRateAPI ниже пропускается ' +
-        '(см. комментарий у fetchUniRateApiRange в скрипте).',
-    )
+      "  Исторический эндпоинт не подтверждён — сравнение по датам для UniRateAPI ниже пропускается " +
+        "(см. комментарий у fetchUniRateApiRange в скрипте).",
+    );
   }
 
   const pairs: Pair[] = [
-    { base: 'USD', quote: 'KZT', label: 'USD/KZT vs НБ РК', official: (s, e) => fetchNbkSampledRange('USD', s, e) },
-    { base: 'EUR', quote: 'KZT', label: 'EUR/KZT vs НБ РК', official: (s, e) => fetchNbkSampledRange('EUR', s, e) },
-    { base: 'RUB', quote: 'KZT', label: 'RUB/KZT vs НБ РК', official: (s, e) => fetchNbkSampledRange('RUB', s, e) },
-  ]
+    {
+      base: "USD",
+      quote: "KZT",
+      label: "USD/KZT vs НБ РК",
+      official: (s, e) => fetchNbkSampledRange("USD", s, e),
+    },
+    {
+      base: "EUR",
+      quote: "KZT",
+      label: "EUR/KZT vs НБ РК",
+      official: (s, e) => fetchNbkSampledRange("EUR", s, e),
+    },
+    {
+      base: "RUB",
+      quote: "KZT",
+      label: "RUB/KZT vs НБ РК",
+      official: (s, e) => fetchNbkSampledRange("RUB", s, e),
+    },
+  ];
 
   for (const pair of pairs) {
-    console.log(`\n=== ${pair.base}/${pair.quote} ===`)
-    console.log('Тяну официальный курс...')
-    let official: DailyRates
+    console.log(`\n=== ${pair.base}/${pair.quote} ===`);
+    console.log("Тяну официальный курс...");
+    let official: DailyRates;
     try {
-      official = await pair.official(start, end)
-      console.log(`  Получено ${official.size} официальных точек.`)
+      official = await pair.official(start, end);
+      console.log(`  Получено ${official.size} официальных точек.`);
     } catch (err) {
-      console.error(`  Официальный источник недоступен: ${(err as Error).message}`)
-      console.error('  Пропускаю сверку по этой паре, иду дальше.')
-      continue
+      console.error(
+        `  Официальный источник недоступен: ${(err as Error).message}`,
+      );
+      console.error("  Пропускаю сверку по этой паре, иду дальше.");
+      continue;
     }
 
     if (FOREXRATEAPI_KEY) {
-      console.log('Тяну ForexRateAPI...')
+      console.log("Тяну ForexRateAPI...");
       try {
-        const provider = await fetchForexRateApiRange(pair.base, pair.quote, start, end)
-        printComparison(`ForexRateAPI — ${pair.label}`, compare(provider, official))
+        const provider = await fetchForexRateApiRange(
+          pair.base,
+          pair.quote,
+          start,
+          end,
+        );
+        printComparison(
+          `ForexRateAPI — ${pair.label}`,
+          compare(provider, official),
+        );
       } catch (err) {
-        console.error(`  ForexRateAPI упал: ${(err as Error).message}`)
+        console.error(`  ForexRateAPI упал: ${(err as Error).message}`);
       }
     }
 
@@ -348,11 +458,15 @@ async function main() {
     // пока не появится реальный пример запроса из их Swagger.
   }
 
-  console.log('\nГотово. Небольшое расхождение (доли процента) — норма: провайдер и НБ РК фиксируют курс в разные моменты дня.')
-  console.log('Расхождение в разы или систематический сдвиг — повод присмотреться к провайдеру внимательнее.')
+  console.log(
+    "\nГотово. Небольшое расхождение (доли процента) — норма: провайдер и НБ РК фиксируют курс в разные моменты дня.",
+  );
+  console.log(
+    "Расхождение в разы или систематический сдвиг — повод присмотреться к провайдеру внимательнее.",
+  );
 }
 
 main().catch((err) => {
-  console.error(err)
-  process.exit(1)
-})
+  console.error(err);
+  process.exit(1);
+});

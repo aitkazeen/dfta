@@ -1,14 +1,14 @@
-import type Redis from 'ioredis'
-import { AnthropicExplainer } from './explainers/anthropic-explainer.js'
-import { GeminiExplainer } from './explainers/gemini-explainer.js'
-import { CachingExplainer } from './explainers/caching-explainer.js'
-import type { Explainer } from './types.js'
+import type Redis from "ioredis";
+import { AnthropicExplainer } from "./explainers/anthropic-explainer.js";
+import { GeminiExplainer } from "./explainers/gemini-explainer.js";
+import { CachingExplainer } from "./explainers/caching-explainer.js";
+import type { Explainer } from "./types.js";
 
 const nullExplainer: Explainer = {
   explain: async () => null,
-}
+};
 
-type ExplainerEnv = { GEMINI_API_KEY?: string; ANTHROPIC_API_KEY?: string }
+type ExplainerEnv = { GEMINI_API_KEY?: string; ANTHROPIC_API_KEY?: string };
 
 /**
  * Фабрика, как и createQuoteProvider (архитектурное правило 1) — без ключей
@@ -21,16 +21,21 @@ type ExplainerEnv = { GEMINI_API_KEY?: string; ANTHROPIC_API_KEY?: string }
  * если он задан, а GEMINI_API_KEY — нет.
  */
 export function createExplainer(
-  redis: Pick<Redis, 'get' | 'set'>,
+  redis: Pick<Redis, "get" | "set">,
   env: ExplainerEnv = process.env,
-  logger: Pick<Console, 'warn'> = console,
+  logger: Pick<Console, "warn"> = console,
 ): Explainer {
   if (env.GEMINI_API_KEY) {
-    return new CachingExplainer(new GeminiExplainer(env.GEMINI_API_KEY), redis)
+    return new CachingExplainer(new GeminiExplainer(env.GEMINI_API_KEY), redis);
   }
   if (env.ANTHROPIC_API_KEY) {
-    return new CachingExplainer(new AnthropicExplainer(env.ANTHROPIC_API_KEY), redis)
+    return new CachingExplainer(
+      new AnthropicExplainer(env.ANTHROPIC_API_KEY),
+      redis,
+    );
   }
-  logger.warn('[explainer] ни GEMINI_API_KEY, ни ANTHROPIC_API_KEY не заданы — прогнозы будут без LLM-объяснения')
-  return nullExplainer
+  logger.warn(
+    "[explainer] ни GEMINI_API_KEY, ни ANTHROPIC_API_KEY не заданы — прогнозы будут без LLM-объяснения",
+  );
+  return nullExplainer;
 }

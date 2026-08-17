@@ -1,6 +1,5 @@
 import { forecastConfig } from "./config";
-import { IndicatorSnapshot } from "./types"
-
+import { IndicatorSnapshot } from "./types";
 
 function clamp(x: number, min: number, max: number) {
   return Math.max(min, Math.min(max, x));
@@ -26,14 +25,19 @@ function centered100(value: number | undefined): number | null {
 
 // MACD не заперт в диапазон — делим на ATR той же свечи, чтобы получить
 // сопоставимую величину между парами с разным порядком цены.
-function atrRelative(value: number | undefined, atr: number | undefined): number | null {
+function atrRelative(
+  value: number | undefined,
+  atr: number | undefined,
+): number | null {
   if (value === undefined || atr === undefined) return null;
   return clamp(value / atr, -1, 1);
 }
 
 // Взвешенное среднее по не-null сигналам. Отсутствующий сигнал исключается
 // целиком (и из числителя, и из знаменателя) — не считается нейтральным нулём.
-function weightedAverage(entries: { score: number | null; weight: number }[]): number | null {
+function weightedAverage(
+  entries: { score: number | null; weight: number }[],
+): number | null {
   const present = entries.filter(
     (e): e is { score: number; weight: number } => e.score !== null,
   );
@@ -42,7 +46,10 @@ function weightedAverage(entries: { score: number | null; weight: number }[]): n
   return present.reduce((sum, e) => sum + e.score * e.weight, 0) / totalWeight;
 }
 
-export function computeTechnicalScore(indicators: IndicatorSnapshot, close: number): number {
+export function computeTechnicalScore(
+  indicators: IndicatorSnapshot,
+  close: number,
+): number {
   const { ema20, ema50, ema200, rsi14, stoch_k, macd, atr14 } = indicators;
   const { emaStack, signals, categoryWeight } = forecastConfig;
 

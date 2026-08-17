@@ -1,11 +1,11 @@
-import { Tabs } from 'expo-router'
-import { fontFamily, useTheme } from '../../src/theme'
+import { Tabs } from "expo-router";
+import { fontFamily, useTheme } from "../../src/theme";
 import {
   AlertsTabIcon,
   MoreTabIcon,
   NewsTabIcon,
   OverviewTabIcon,
-} from '../../src/components'
+} from "../../src/components";
 
 /**
  * Нижний таб-бар (бриф §4.2): Обзор · Новости · Алерты · Ещё.
@@ -14,7 +14,7 @@ import {
  * Безопасную зону снизу React Navigation добавляет к таб-бару сам.
  */
 export default function TabsLayout() {
-  const { colors } = useTheme()
+  const { colors } = useTheme();
 
   return (
     <Tabs
@@ -33,20 +33,32 @@ export default function TabsLayout() {
     >
       <Tabs.Screen
         name="index"
-        options={{ title: 'Обзор', tabBarIcon: ({ color }) => <OverviewTabIcon color={color} /> }}
+        options={{
+          title: "Обзор",
+          tabBarIcon: ({ color }) => <OverviewTabIcon color={color} />,
+        }}
       />
       <Tabs.Screen
         name="news"
-        options={{ title: 'Новости', tabBarIcon: ({ color }) => <NewsTabIcon color={color} /> }}
+        options={{
+          title: "Новости",
+          tabBarIcon: ({ color }) => <NewsTabIcon color={color} />,
+        }}
       />
       <Tabs.Screen
         name="alerts"
-        options={{ title: 'Алерты', tabBarIcon: ({ color }) => <AlertsTabIcon color={color} /> }}
+        options={{
+          title: "Алерты",
+          tabBarIcon: ({ color }) => <AlertsTabIcon color={color} />,
+        }}
       />
       <Tabs.Screen
         name="more"
-        options={{ title: 'Ещё', tabBarIcon: ({ color }) => <MoreTabIcon color={color} /> }}
+        options={{
+          title: "Ещё",
+          tabBarIcon: ({ color }) => <MoreTabIcon color={color} />,
+        }}
       />
     </Tabs>
-  )
+  );
 }

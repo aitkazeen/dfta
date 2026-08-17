@@ -1,19 +1,22 @@
-import type { ApiForecast } from '../api'
-import type { Direction, Driver, Forecast } from '../types'
+import type { ApiForecast } from "../api";
+import type { Direction, Driver, Forecast } from "../types";
 
 export const DIRECTION_LABEL: Record<Direction, string> = {
-  up: 'Рост',
-  down: 'Падение',
-  flat: 'Без изменений',
-}
+  up: "Рост",
+  down: "Падение",
+  flat: "Без изменений",
+};
 
 /**
  * Пока нет реального прогноза (свежедобавленная пара, воркер ещё не прогнал
  * сутки) — узкий диапазон вокруг текущего курса, а не абсолютные числа мока:
  * те в масштабе USD-KZT (~510) и ломают домен графика на других парах.
  */
-export function fallbackTargetRange(rate: number): { targetLow: number; targetHigh: number } {
-  return { targetLow: rate * 0.995, targetHigh: rate * 1.01 }
+export function fallbackTargetRange(rate: number): {
+  targetLow: number;
+  targetHigh: number;
+} {
+  return { targetLow: rate * 0.995, targetHigh: rate * 1.01 };
 }
 
 /**
@@ -31,9 +34,9 @@ export function mapForecast(api: ApiForecast, prev: Forecast): Forecast {
     targetLow: api.targetLow,
     targetHigh: api.targetHigh,
     confidence: Math.round(api.confidence * 100),
-    explanation: api.explanation ?? '',
+    explanation: api.explanation ?? "",
     drivers: (api.drivers as Driver[] | null) ?? [],
     enginePairAccuracyPct: prev.enginePairAccuracyPct,
     enginePairWindowDays: prev.enginePairWindowDays,
-  }
+  };
 }

@@ -1,13 +1,13 @@
-import { StyleSheet, View } from 'react-native'
-import { fontFamily, radius, spacing, useTheme } from '../theme'
-import { Text } from './Text'
-import type { NewsArticle } from '../types'
+import { StyleSheet, View } from "react-native";
+import { fontFamily, radius, spacing, useTheme } from "../theme";
+import { Text } from "./Text";
+import type { NewsArticle } from "../types";
 
 type Props = {
-  article: NewsArticle
+  article: NewsArticle;
   /** Первая новость в списке — без верхней границы. */
-  first?: boolean
-}
+  first?: boolean;
+};
 
 /**
  * Новость по паре: источник + время, заголовок, бейдж влияния.
@@ -15,11 +15,14 @@ type Props = {
  * не «прыгал» по высоте.
  */
 export function NewsItem({ article, first }: Props) {
-  const { colors } = useTheme()
+  const { colors } = useTheme();
 
   return (
     <View
-      style={[styles.item, !first && { borderTopWidth: 1, borderTopColor: colors.borderSubtle }]}
+      style={[
+        styles.item,
+        !first && { borderTopWidth: 1, borderTopColor: colors.borderSubtle },
+      ]}
     >
       <View style={styles.meta}>
         <Text variant="caption" color={colors.textTertiary}>
@@ -38,7 +41,7 @@ export function NewsItem({ article, first }: Props) {
         </Text>
       </View>
     </View>
-  )
+  );
 }
 
 const styles = StyleSheet.create({
@@ -46,8 +49,8 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm + 2, // 10
   },
   meta: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
     marginBottom: spacing.xs,
   },
   title: {
@@ -56,10 +59,10 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   tag: {
-    alignSelf: 'flex-start',
+    alignSelf: "flex-start",
     marginTop: 6,
     borderRadius: radius.sm - 2, // 6
     paddingVertical: 3,
     paddingHorizontal: 8,
   },
-})
+});
