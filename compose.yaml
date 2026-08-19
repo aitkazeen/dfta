@@ -65,6 +65,10 @@ services:
       # При обоих заданных выигрывает бесплатный Gemini.
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      # Без него createNewsSources пропускает Marketaux и опрашивает только
+      # НБ РК RSS (см. news/sources.factory.ts) — не обязателен, но без него
+      # источник новостей всего один.
+      MARKETAUXAPI_KEY: ${MARKETAUXAPI_KEY:-}
     depends_on:
       db:
         condition: service_healthy

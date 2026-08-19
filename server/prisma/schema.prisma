@@ -35,6 +35,7 @@ model CurrencyPair {
   candles Candle[]
   indicators IndicatorValue[]
   forecasts Forecast[]
+  newsLinks NewsPairLink[]
 
   @@unique([baseCode, quoteCode])
   @@map("currency_pair")
@@ -100,4 +101,47 @@ model ForecastOutcome {
   forecast Forecast @relation(fields: [forecastId], references: [id])
 
   @@map("forecast_outcome")
+}
+
+model NewsArticle {
+  id           String   @id @default(cuid())
+  externalId   String   @unique @map("external_id") // sha256(url) — ключ дедупа
+  source       String   // "nbk-rss" | "marketaux"
+  url          String
+  title        String
+  summary      String?
+  publishedAt  DateTime @map("published_at")
+  lang         String
+  rawSentiment Decimal? @map("raw_sentiment") @db.Decimal(4, 3) // сентимент сущности от Marketaux, null для RSS-статей
+  ourSentiment Decimal? @map("our_sentiment") @db.Decimal(4, 3) // LLM-классификация, null если rawSentiment уже есть или классификация не удалась
+  fetchedAt    DateTime @default(now()) @map("fetched_at")
+
+  pairLinks NewsPairLink[]
+  entities  NewsEntity[]
+
+  @@map("news_article")
+}
+
+model NewsPairLink {
+  articleId   String  @map("article_id")
+  pairId      String  @map("pair_id")
+  relevance   Decimal @db.Decimal(4, 3)
+  impactScore Decimal @map("impact_score") @db.Decimal(4, 3)
+
+  article NewsArticle  @relation(fields: [articleId], references: [id])
+  pair    CurrencyPair @relation(fields: [pairId], references: [id])
+
+  @@id([articleId, pairId])
+  @@map("news_pair_link")
+}
+
+model NewsEntity {
+  articleId   String @map("article_id")
+  entityType  String @map("entity_type")  // "currency" | "country" | "institution"
+  entityValue String @map("entity_value")
+
+  article NewsArticle @relation(fields: [articleId], references: [id])
+
+  @@id([articleId, entityType, entityValue])
+  @@map("news_entity")
 }

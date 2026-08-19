@@ -1,8 +1,8 @@
-import { darkColors } from './colors.dark'
+import { darkColors } from "./colors.dark";
 
-export * from './tokens'
-export { darkColors }
-export type { ColorTokens } from './colors.dark'
+export * from "./tokens";
+export { darkColors };
+export type { ColorTokens } from "./colors.dark";
 
 /**
  * Единая точка доступа к цветам темы.
@@ -13,5 +13,5 @@ export type { ColorTokens } from './colors.dark'
  * читаем useColorScheme() + контекст, отдаём нужный набор.
  */
 export function useTheme() {
-  return { colors: darkColors }
+  return { colors: darkColors };
 }

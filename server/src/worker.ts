@@ -10,6 +10,10 @@ import { resolveForecastOutcome } from "./modules/forecast/outcomes.js";
 import { forecastConfig } from "./modules/forecast/config.js";
 import { createExplainer } from "./modules/forecast/explainer.factory.js";
 import type { Direction } from "./modules/forecast/types.js";
+import { createNewsSources } from "./modules/news/sources.factory.js";
+import { createSentimentClassifier } from "./modules/news/sentiment-classifier.factory.js";
+import { runNewsPipeline } from "./modules/news/pipeline.js";
+import { getNewsScore } from "./modules/news/repository.js";
 
 const QUEUE_NAME = "quotes";
 // НБ РК публикует один фиксинг в сутки (см. nbk.ts) — курс внутри дня не
@@ -17,6 +21,11 @@ const QUEUE_NAME = "quotes";
 // 6 часов — компромисс между задержкой подхвата нового фиксинга (макс. 6ч)
 // и числом запросов к nationalbank.kz.
 const POLL_INTERVAL_MS = 6 * 60 * 60 * 1000;
+
+const NEWS_QUEUE_NAME = "news";
+// RSS/Marketaux обновляются в течение дня, не раз в сутки как НБ РК —
+// опрашиваем чаще (roadmap §1, архитектурная схема).
+const NEWS_POLL_INTERVAL_MS = 15 * 60 * 1000;
 
 const HORIZON_MS: Record<string, number> = {
   "24h": 24 * 60 * 60 * 1000,
@@ -36,8 +45,11 @@ const connection = new IORedis(
   },
 );
 const explainer = createExplainer(connection);
+const newsSources = createNewsSources();
+const sentimentClassifier = createSentimentClassifier(connection);
 
 const queue = new Queue(QUEUE_NAME, { connection });
+const newsQueue = new Queue(NEWS_QUEUE_NAME, { connection });
 
 async function pollAllPairs(): Promise<void> {
   const pairs = await db.currencyPair.findMany({ where: { isActive: true } });
@@ -56,6 +68,16 @@ async function pollAllPairs(): Promise<void> {
   }
 
   await resolvePendingOutcomes();
+}
+
+async function collectNews(): Promise<void> {
+  const pairs = await db.currencyPair.findMany({ where: { isActive: true } });
+  await runNewsPipeline({
+    db,
+    sources: newsSources,
+    sentimentClassifier,
+    pairs,
+  });
 }
 
 // Правило 5 (CLAUDE.md): forecast_outcome пишется всегда, для каждого
@@ -228,11 +250,13 @@ async function maybeGenerateForecast(
   if (!(await shouldGenerateForecast(pair.id, today))) return;
 
   const indicators = await getLatestIndicators(db, pair.id);
+  const newsScore = await getNewsScore(db, pair.id);
   const result = await forecastEngine.predict({
     pairId: pair.id,
     horizon: "24h",
     close,
     indicators,
+    newsScore,
   });
 
   // Без ATR прогноз вырожденный (flat/0, см. RulesForecastEngine) — объяснять
@@ -283,9 +307,15 @@ async function maybeGenerateForecast(
 }
 
 const worker = new Worker(QUEUE_NAME, () => pollAllPairs(), { connection });
+const newsWorker = new Worker(NEWS_QUEUE_NAME, () => collectNews(), {
+  connection,
+});
 
 worker.on("failed", (job: Job | undefined, err: Error) => {
   console.error(`[worker] job ${job?.id} failed:`, err.message);
+});
+newsWorker.on("failed", (job: Job | undefined, err: Error) => {
+  console.error(`[news-worker] job ${job?.id} failed:`, err.message);
 });
 
 // Регистрируем повторяющуюся задачу при каждом старте — upsertJobScheduler
@@ -297,5 +327,12 @@ await queue.upsertJobScheduler("poll", {
   every: POLL_INTERVAL_MS,
   immediately: true,
 });
+await newsQueue.upsertJobScheduler("collect-news", {
+  every: NEWS_POLL_INTERVAL_MS,
+  immediately: true,
+});
 
 console.log(`[worker] started, polling every ${POLL_INTERVAL_MS / 1000}s`);
+console.log(
+  `[news-worker] started, polling every ${NEWS_POLL_INTERVAL_MS / 1000}s`,
+);

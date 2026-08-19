@@ -4,15 +4,14 @@ import {
   buildUserPrompt,
   parseExplainResponse,
 } from "./prompt.js";
+import { fetchWithRetry } from "../../../utils/fetch-with-retry.js";
+import { httpConfig } from "../../../config.js";
 
 // Алиас, а не конкретная версия — Google периодически снимает старые версии
 // с поддержки для новых ключей (так и произошло с gemini-2.5-flash, живьём
 // проверено 2026-08-16: 404 "no longer available to new users"). latest сам
 // переезжает на актуальную модель без правки кода.
 const DEFAULT_MODEL = "gemini-flash-latest";
-// Правило 8 (CLAUDE.md): внешний вызов — с таймаутом и ретраем.
-const FETCH_TIMEOUT_MS = 15_000;
-const FETCH_RETRIES = 1;
 
 type GeminiResponse = {
   candidates?: { content?: { parts?: { text?: string }[] } }[];
@@ -46,35 +45,26 @@ export class GeminiExplainer implements Explainer {
       },
     });
 
-    for (let attempt = 0; attempt <= FETCH_RETRIES; attempt++) {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
-      try {
-        const res = await fetch(url, {
+    try {
+      const res = await fetchWithRetry(
+        url,
+        {
           method: "POST",
           headers: { "content-type": "application/json" },
           body,
-          signal: controller.signal,
-        });
-        clearTimeout(timeout);
-        if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
-
-        const data = (await res.json()) as GeminiResponse;
-        const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (!text) return null;
-        return parseExplainResponse(text);
-      } catch (err) {
-        clearTimeout(timeout);
-        if (attempt === FETCH_RETRIES) {
-          console.error(
-            "[explainer] gemini вызов не удался:",
-            (err as Error).message,
-          );
-          return null;
-        }
-        await new Promise((r) => setTimeout(r, 500 * (attempt + 1)));
-      }
+        },
+        httpConfig.llm,
+      );
+      const data = (await res.json()) as GeminiResponse;
+      const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!text) return null;
+      return parseExplainResponse(text);
+    } catch (err) {
+      console.error(
+        "[explainer] gemini вызов не удался:",
+        (err as Error).message,
+      );
+      return null;
     }
-    return null;
   }
 }

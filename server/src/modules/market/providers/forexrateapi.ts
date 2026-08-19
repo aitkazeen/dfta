@@ -1,4 +1,5 @@
-import { fetchWithRetry } from "../fetch-with-retry.js";
+import { fetchWithRetry } from "../../../utils/fetch-with-retry.js";
+import { httpConfig } from "../../../config.js";
 import {
   QuoteProviderError,
   type IQuoteProvider,
@@ -24,8 +25,8 @@ export class ForexRateApiQuoteProvider implements IQuoteProvider {
 
   async getQuote(base: string, quote: string): Promise<Quote> {
     const url = `https://api.forexrateapi.com/v1/latest?api_key=${this.apiKey}&base=${base}&currencies=${quote}`;
-    const body = await fetchWithRetry(url);
-    const json = JSON.parse(body) as ForexRateApiResponse;
+    const res = await fetchWithRetry(url, {}, httpConfig.fx);
+    const json = (await res.json()) as ForexRateApiResponse;
 
     if (!json.success) {
       throw new QuoteProviderError(

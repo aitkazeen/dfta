@@ -17,6 +17,7 @@ export class RulesForecastEngine implements ForecastEngine {
         engineVersion: this.version,
         features: {
           technicalScore,
+          newsScore: input.newsScore,
           close: input.close,
           indicators: input.indicators,
           reason: "no-atr",
@@ -24,16 +25,24 @@ export class RulesForecastEngine implements ForecastEngine {
       };
     }
 
-    const { flatThreshold, maxMovePct } = forecastConfig.decision;
+    const { flatThreshold, maxMovePct, technicalWeight, newsWeight } = {
+      ...forecastConfig.decision,
+      ...forecastConfig.merge,
+    };
+    // Слияние технического и новостного сигналов (roadmap §5.3):
+    // technicalScore * 0.6 + newsScore * 0.4.
+    const blendedScore =
+      technicalScore * technicalWeight + input.newsScore * newsWeight;
+
     const direction =
-      technicalScore > flatThreshold
+      blendedScore > flatThreshold
         ? "up"
-        : technicalScore < -flatThreshold
+        : blendedScore < -flatThreshold
           ? "down"
           : "flat";
-    const confidence = Math.abs(technicalScore);
+    const confidence = Math.abs(blendedScore);
 
-    const mid = input.close * (1 + technicalScore * maxMovePct);
+    const mid = input.close * (1 + blendedScore * maxMovePct);
     const band = input.indicators.atr14 / 2;
 
     return {
@@ -44,6 +53,8 @@ export class RulesForecastEngine implements ForecastEngine {
       engineVersion: this.version,
       features: {
         technicalScore,
+        newsScore: input.newsScore,
+        blendedScore,
         close: input.close,
         indicators: input.indicators,
       },

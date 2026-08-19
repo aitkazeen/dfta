@@ -1,35 +1,35 @@
-import type { Explainer, ExplainInput, ExplainResult } from "../types.js";
+import type {
+  SentimentClassifier,
+  SentimentClassifierInput,
+} from "../types.js";
 import {
   SYSTEM_PROMPT,
   buildUserPrompt,
-  parseExplainResponse,
+  parseSentimentResponse,
 } from "./prompt.js";
 import { fetchWithRetry } from "../../../utils/fetch-with-retry.js";
 import { httpConfig } from "../../../config.js";
 
 const API_URL = "https://api.anthropic.com/v1/messages";
 const ANTHROPIC_VERSION = "2023-06-01";
-// Haiku-класс модели — то же обоснование, что в architecture-roadmap.md §5.3:
-// ~20 пар × 1 вызов/сутки не оправдывает более дорогую модель.
 const DEFAULT_MODEL = "claude-haiku-4-5-20251001";
 
-/**
- * Реализация Explainer на Claude (Anthropic Messages API). Платная — нужен
- * баланс на аккаунте (не триальный лимит). Для бесплатного варианта см.
- * gemini-explainer.ts; выбор между ними — в explainer.factory.ts.
- */
-export class AnthropicExplainer implements Explainer {
+export class AnthropicSentimentClassifier implements SentimentClassifier {
   constructor(
     private readonly apiKey: string,
     private readonly model: string = DEFAULT_MODEL,
   ) {}
 
-  async explain(input: ExplainInput): Promise<ExplainResult | null> {
+  async classify(
+    articles: SentimentClassifierInput[],
+  ): Promise<Record<string, number>> {
+    if (articles.length === 0) return {};
+
     const body = JSON.stringify({
       model: this.model,
-      max_tokens: 500,
+      max_tokens: 800,
       system: SYSTEM_PROMPT,
-      messages: [{ role: "user", content: buildUserPrompt(input) }],
+      messages: [{ role: "user", content: buildUserPrompt(articles) }],
     });
 
     try {
@@ -50,14 +50,17 @@ export class AnthropicExplainer implements Explainer {
         content?: { type: string; text?: string }[];
       };
       const text = data.content?.find((c) => c.type === "text")?.text;
-      if (!text) return null;
-      return parseExplainResponse(text);
+      if (!text) return {};
+
+      const parsed = parseSentimentResponse(text);
+      if (!parsed) return {};
+      return Object.fromEntries(parsed.map((p) => [p.id, p.sentiment]));
     } catch (err) {
       console.error(
-        "[explainer] anthropic вызов не удался:",
+        "[news] anthropic sentiment classify вызов не удался:",
         (err as Error).message,
       );
-      return null;
+      return {};
     }
   }
 }

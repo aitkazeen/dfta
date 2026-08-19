@@ -15,6 +15,9 @@ export type ForecastInput = {
   horizon: "24h" | "7d";
   close: number;
   indicators: IndicatorSnapshot;
+  // Не опционально — воркер всегда считает его через news/repository.ts
+  // getNewsScore (0, если новостей за окно не было), см. roadmap §5.3.
+  newsScore: number;
 };
 
 export type ForecastResult = {

@@ -11,8 +11,14 @@ export const forecastConfig = {
     emaDeviation: 0.02,
   },
   decision: {
-    flatThreshold: 0.1,   // |technicalScore| ниже этого — 'flat'
-    maxMovePct: 0.01,     // сдвиг середины диапазона от close при score = ±1
+    flatThreshold: 0.1, // |blendedScore| ниже этого — 'flat'
+    maxMovePct: 0.01, // сдвиг середины диапазона от close при score = ±1
+  },
+
+  // Слияние технического и новостного сигналов (roadmap §5.3).
+  merge: {
+    technicalWeight: 0.6,
+    newsWeight: 0.4,
   },
 
   categoryWeight: {

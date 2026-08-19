@@ -1,4 +1,5 @@
-import { fetchWithRetry } from "../fetch-with-retry.js";
+import { fetchWithRetry } from "../../../utils/fetch-with-retry.js";
+import { httpConfig } from "../../../config.js";
 import {
   QuoteProviderError,
   type IQuoteProvider,
@@ -43,9 +44,12 @@ export class NbkQuoteProvider implements IQuoteProvider {
     }
 
     const now = new Date();
-    const xml = await fetchWithRetry(
+    const res = await fetchWithRetry(
       `https://nationalbank.kz/rss/get_rates.cfm?fdate=${toRuDate(now)}`,
+      {},
+      httpConfig.fx,
     );
+    const xml = await res.text();
     const rate = extractRate(xml, base);
     if (rate == null) {
       throw new QuoteProviderError(

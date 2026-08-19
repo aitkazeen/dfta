@@ -110,13 +110,11 @@ describe("AnthropicExplainer", () => {
   it("HTTP-ошибка от API — возвращает null, не бросает", async () => {
     vi.stubGlobal(
       "fetch",
-      vi
-        .fn()
-        .mockResolvedValue({
-          ok: false,
-          status: 401,
-          statusText: "Unauthorized",
-        }),
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 401,
+        statusText: "Unauthorized",
+      }),
     );
 
     const explainer = new AnthropicExplainer("test-key");
