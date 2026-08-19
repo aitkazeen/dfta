@@ -1,10 +1,10 @@
-import { StyleSheet, View } from 'react-native'
-import { useTheme } from '../theme'
+import { StyleSheet, View } from "react-native";
+import { useTheme } from "../theme";
 
 type Props = {
   /** Последние N резолвов прогнозов: true = совпало с фактом. */
-  outcomes: boolean[]
-}
+  outcomes: boolean[];
+};
 
 /**
  * Ряд квадратов-исходов для блока «Точность прогнозов»: совпадение —
@@ -12,7 +12,7 @@ type Props = {
  * честную точность из forecast_outcome (бриф §4.4 «Честная статистика»).
  */
 export function AccuracyGrid({ outcomes }: Props) {
-  const { colors } = useTheme()
+  const { colors } = useTheme();
   return (
     <View style={styles.grid}>
       {outcomes.map((hit, i) => (
@@ -20,18 +20,21 @@ export function AccuracyGrid({ outcomes }: Props) {
           key={i}
           style={[
             styles.cell,
-            { backgroundColor: hit ? colors.up : colors.textTertiary, opacity: hit ? 1 : 0.4 },
+            {
+              backgroundColor: hit ? colors.up : colors.textTertiary,
+              opacity: hit ? 1 : 0.4,
+            },
           ]}
         />
       ))}
     </View>
-  )
+  );
 }
 
 const styles = StyleSheet.create({
   grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 3,
   },
   cell: {
@@ -39,4 +42,4 @@ const styles = StyleSheet.create({
     height: 12,
     borderRadius: 3,
   },
-})
+});

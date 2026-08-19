@@ -1,20 +1,30 @@
-import { Pressable, StyleSheet, type StyleProp, type ViewStyle } from 'react-native'
-import { radius, useTheme } from '../theme'
+import {
+  Pressable,
+  StyleSheet,
+  type StyleProp,
+  type ViewStyle,
+} from "react-native";
+import { radius, useTheme } from "../theme";
 
 type Props = {
-  onPress?: () => void
-  accessibilityLabel: string
-  children: React.ReactNode
-  style?: StyleProp<ViewStyle>
-}
+  onPress?: () => void;
+  accessibilityLabel: string;
+  children: React.ReactNode;
+  style?: StyleProp<ViewStyle>;
+};
 
 /**
  * Круглая кнопка-иконка (back, bell). Визуально 36×36 как в макете,
  * но hitSlop добавляет по 4px с каждой стороны → эффективная зона нажатия
  * 44×44, как требует бриф §3.3.
  */
-export function IconButton({ onPress, accessibilityLabel, children, style }: Props) {
-  const { colors } = useTheme()
+export function IconButton({
+  onPress,
+  accessibilityLabel,
+  children,
+  style,
+}: Props) {
+  const { colors } = useTheme();
   return (
     <Pressable
       onPress={onPress}
@@ -29,7 +39,7 @@ export function IconButton({ onPress, accessibilityLabel, children, style }: Pro
     >
       {children}
     </Pressable>
-  )
+  );
 }
 
 const styles = StyleSheet.create({
@@ -37,7 +47,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: radius.full,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
-})
+});

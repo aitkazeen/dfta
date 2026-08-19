@@ -1,21 +1,21 @@
-import { Pressable, StyleSheet, View } from 'react-native'
-import { fontFamily, radius, spacing, useTheme } from '../theme'
-import { Text } from './Text'
-import { Card } from './Card'
-import { BankIcon, GlobeIcon, NewsIcon, TrendIcon } from './icons'
-import type { FullForecastDriver } from '../types'
+import { Pressable, StyleSheet, View } from "react-native";
+import { fontFamily, radius, spacing, useTheme } from "../theme";
+import { Text } from "./Text";
+import { Card } from "./Card";
+import { BankIcon, GlobeIcon, NewsIcon, TrendIcon } from "./icons";
+import type { FullForecastDriver } from "../types";
 
 type Props = {
-  driver: FullForecastDriver
-  onPressSource?: () => void
-}
+  driver: FullForecastDriver;
+  onPressSource?: () => void;
+};
 
 const ICON = {
   technical: TrendIcon,
   news: NewsIcon,
   regulator: BankIcon,
   global: GlobeIcon,
-} as const
+} as const;
 
 /**
  * Развёрнутая карточка драйвера прогноза (экран 4.4) — детализация
@@ -23,13 +23,15 @@ const ICON = {
  * объяснение влияния на пару, ссылка на источник.
  */
 export function DriverCard({ driver, onPressSource }: Props) {
-  const { colors } = useTheme()
-  const Icon = ICON[driver.category]
+  const { colors } = useTheme();
+  const Icon = ICON[driver.category];
 
   return (
     <Card>
       <View style={styles.header}>
-        <View style={[styles.iconBox, { backgroundColor: colors.bgSurfaceRaised }]}>
+        <View
+          style={[styles.iconBox, { backgroundColor: colors.bgSurfaceRaised }]}
+        >
           <Icon color={colors.textSecondary} size={15} />
         </View>
         <Text variant="title" style={styles.what}>
@@ -45,31 +47,38 @@ export function DriverCard({ driver, onPressSource }: Props) {
         onPress={onPressSource}
         accessibilityRole="button"
         hitSlop={4}
-        style={({ pressed }) => [styles.source, { opacity: pressed && onPressSource ? 0.6 : 1 }]}
+        style={({ pressed }) => [
+          styles.source,
+          { opacity: pressed && onPressSource ? 0.6 : 1 },
+        ]}
       >
-        <Text variant="label" color={colors.accent} style={{ fontFamily: fontFamily.semibold }}>
+        <Text
+          variant="label"
+          color={colors.accent}
+          style={{ fontFamily: fontFamily.semibold }}
+        >
           {driver.source} →
         </Text>
       </Pressable>
     </Card>
-  )
+  );
 }
 
 const styles = StyleSheet.create({
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: spacing.sm,
   },
   iconBox: {
     width: 28,
     height: 28,
     borderRadius: radius.sm,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     flexShrink: 0,
   },
   what: { flex: 1 },
   impact: { marginTop: spacing.sm },
-  source: { marginTop: spacing.sm + 2, alignSelf: 'flex-start' }, // 10
-})
+  source: { marginTop: spacing.sm + 2, alignSelf: "flex-start" }, // 10
+});

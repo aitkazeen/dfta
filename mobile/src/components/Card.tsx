@@ -1,18 +1,18 @@
-import { View, type ViewProps } from 'react-native'
-import { radius, spacing, useTheme } from '../theme'
+import { View, type ViewProps } from "react-native";
+import { radius, spacing, useTheme } from "../theme";
 
 type Props = ViewProps & {
   /** Внутренний отступ 16 (бриф §3.3). Выключить для карточек-аккордеонов,
    *  где padding задают сами секции. */
-  padded?: boolean
-}
+  padded?: boolean;
+};
 
 /**
  * Базовая карточка: поверхность surface, обводка border/subtle, радиус lg.
  * Теней нет — в dark-теме глубина строится обводкой и surface-raised (бриф §3.3).
  */
 export function Card({ style, padded = true, ...rest }: Props) {
-  const { colors } = useTheme()
+  const { colors } = useTheme();
   return (
     <View
       {...rest}
@@ -27,5 +27,5 @@ export function Card({ style, padded = true, ...rest }: Props) {
         style,
       ]}
     />
-  )
+  );
 }

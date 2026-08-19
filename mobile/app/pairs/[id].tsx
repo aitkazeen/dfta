@@ -4,7 +4,12 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { spacing, useTheme } from "../../src/theme";
 import { formatRate, formatSignedPct } from "../../src/lib/format";
-import { getCandles, getForecast, getIndicators, getQuote } from "../../src/api";
+import {
+  getCandles,
+  getForecast,
+  getIndicators,
+  getQuote,
+} from "../../src/api";
 import { mapIndicators } from "../../src/lib/indicators";
 import { fallbackTargetRange, mapForecast } from "../../src/lib/forecast";
 import { deriveDelta } from "../../src/lib/market";
