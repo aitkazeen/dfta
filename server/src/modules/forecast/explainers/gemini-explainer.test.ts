@@ -59,12 +59,10 @@ describe("GeminiExplainer", () => {
   it("пустой candidates — возвращает null, не бросает", async () => {
     vi.stubGlobal(
       "fetch",
-      vi
-        .fn()
-        .mockResolvedValue({
-          ok: true,
-          json: async () => ({ candidates: [] }),
-        }),
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ candidates: [] }),
+      }),
     );
 
     const explainer = new GeminiExplainer("test-key");
@@ -96,13 +94,11 @@ describe("GeminiExplainer", () => {
   it("HTTP-ошибка от API — возвращает null, не бросает", async () => {
     vi.stubGlobal(
       "fetch",
-      vi
-        .fn()
-        .mockResolvedValue({
-          ok: false,
-          status: 429,
-          statusText: "Too Many Requests",
-        }),
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 429,
+        statusText: "Too Many Requests",
+      }),
     );
 
     const explainer = new GeminiExplainer("test-key");
