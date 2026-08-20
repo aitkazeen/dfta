@@ -19,4 +19,8 @@ export const newsConfig = {
     EUR: ["евро", "eur"],
     RUB: ["рубл", "rub"],
   } as Record<string, string[]>,
+  deduplicated: {
+    period: 4 * 60 * 60 * 1000,
+    similarityCoefficient: 0.8,
+  },
 };

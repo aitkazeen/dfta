@@ -8,6 +8,7 @@ import { findRelevantPairs } from "./relevance.js";
 import { freshnessDecay, computeImpactScore } from "./scoring.js";
 import { newsConfig } from "./config.js";
 import { toMarketauxSymbol } from "./sources/marketaux-source.js";
+import { clusterDuplicates } from "./dedup.js";
 
 type Pair = { id: string; baseCode: string; quoteCode: string };
 
@@ -62,11 +63,29 @@ export async function runNewsPipeline(deps: {
     );
   }
 
+  // Одна и та же новость часто приходит от НБ РК и от Marketaux с разными
+  // заголовками/URL — без этого newsScore считал бы такую историю дважды.
+  // Каждой статье сопоставляется id "канонической" — той, что реально
+  // участвует в скоринге (dedup.ts: выше sourceWeight, при равенстве —
+  // раньше опубликована).
+  const canonicalByExternalId = clusterDuplicates(
+    allArticles.map((a) => ({
+      externalId: a.externalId,
+      title: a.title,
+      publishedAt: a.publishedAt,
+      source: a.source,
+    })),
+  );
+  const isCanonical = (externalId: string) =>
+    canonicalByExternalId.get(externalId) === externalId;
+
   // RSS-статьи без готового сентимента батчим на LLM разом — дешевле, чем
   // по одной, и не тратим вызовы на статьи, которые всё равно ни к одной
-  // паре не относятся.
+  // паре не относятся. Дубли (не канонические) сюда не попадают — их вклад
+  // в newsScore не учитывается вовсе, платить LLM за их классификацию смысла нет.
   const needsClassification = allArticles.filter(
     (a) =>
+      isCanonical(a.externalId) &&
       a.rawSentiment === undefined &&
       (relevantByArticle.get(a.externalId)?.length ?? 0) > 0,
   );
@@ -123,6 +142,14 @@ export async function runNewsPipeline(deps: {
         update: {},
       });
     }
+
+    // Дубль той же истории (canonicalByExternalId) не получает newsPairLink:
+    // вклад истории в newsScore уже учтён через канонический экземпляр,
+    // второй раз считать её не нужно. Сама статья выше всё равно попадает в
+    // newsArticle/newsEntity, если для неё нашёлся sentiment — дубли не
+    // классифицируются (needsClassification), но обычно это Marketaux-статьи
+    // с готовым rawSentiment, так что до этой строки они всё же доходят.
+    if (!isCanonical(article.externalId)) continue;
 
     const sourceWeight = newsConfig.sourceWeight[article.source] ?? 0.5;
     const freshness = freshnessDecay(
