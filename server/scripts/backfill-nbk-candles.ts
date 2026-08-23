@@ -8,7 +8,7 @@ const db = new PrismaClient();
 
 async function main() {
   const raw = fs.readFileSync(IN_PATH, "utf-8").trim();
-  const [header, ...lines] = raw.split("\n");
+  const [, ...lines] = raw.split("\n"); // первая строка — заголовок CSV, пропускаем
   const rows = lines.map((line) => {
     const [date, usdKzt, eurKzt, rubKzt] = line.split(",");
     return {
