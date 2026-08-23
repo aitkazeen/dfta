@@ -38,7 +38,7 @@ const DEAD_ZONE_PCT =
 const BUCKET_WIDTH = 0.1;
 const OUT_PATH = path.resolve(
   import.meta.dirname,
-  "../src/modules/forecast/calibration.ts",
+  "../src/modules/forecast/calibration-data.ts",
 );
 
 const db = new PrismaClient();
@@ -215,21 +215,34 @@ async function main(): Promise<void> {
     calibrationByHorizon[horizon] = calibrate(buckets);
   }
 
+  // Только данные — тип и функция чтения таблицы живут в calibration.ts
+  // (статичный, не регенерируется), чтобы реальная логика оставалась
+  // обычным, тестируемым TS-модулем, а не строкой внутри этого скрипта.
+  //
+  // language=none — это просто текст, который пишется в файл (writeFile
+  // ниже), не настоящий TS-код этого скрипта. Без этой пометки WebStorm
+  // подсвечивает содержимое строки как TypeScript ("language injection") и
+  // из-за ${JSON.stringify(...)} внутри шаблонной строки иногда теряет
+  // связь между объявлением типа и его использованием в этой же строке,
+  // ошибочно предлагая "импортировать" то, что объявлено тут же на пару
+  // строк выше. tsc/eslint/тесты эту строку не разбирают вообще — это
+  // ложное срабатывание только в редакторе.
+  // language=none
   const fileContent = `// СГЕНЕРИРОВАНО: npm run forecast:backtest (server/scripts/backtest-forecast.ts)
 // ${new Date().toISOString().slice(0, 10)} — не редактировать руками, перегенерировать бэктестом.
 //
-// Правило 6 (CLAUDE.md): confidence берётся из этой таблицы "скор → факт.
-// частота попадания", не из формулы наугад. Таблица монотонна по построению
-// (isotonic regression поверх walk-forward бэктеста на 2-летнем датасете
-// НБ РК) — выше сырой |blendedScore| гарантированно не даёт ниже confidence.
+// Таблица монотонна по построению (isotonic regression поверх walk-forward
+// бэктеста на 2-летнем датасете НБ РК) — выше сырой |blendedScore|
+// гарантированно не даёт ниже confidence.
 //
 // Ограничение: бэктест использует newsScore = 0 для всей истории (архива
 // новостей за 2 года нет) — калибровка отражает фактически только
-// technicalScore-часть блендинга.
+// technicalScore-часть блендинга. Логика чтения таблицы — в calibration.ts
+// (не регенерируется, статичная).
 
 export type CalibrationBreakpoint = { minScore: number; confidence: number };
 
-export const calibration: Record<string, CalibrationBreakpoint[]> = ${JSON.stringify(
+export const calibrationTable: Record<string, CalibrationBreakpoint[]> = ${JSON.stringify(
     Object.fromEntries(
       Object.entries(calibrationByHorizon).map(([h, points]) => [
         h,
@@ -239,19 +252,6 @@ export const calibration: Record<string, CalibrationBreakpoint[]> = ${JSON.strin
     null,
     2,
   )};
-
-// Наименьший калиброванный score ниже самого нижнего бакета с данными —
-// используем confidence самого нижнего доступного бакета (экстраполяция
-// вниз не делается, это было бы гаданием за пределами данных).
-export function calibrateConfidence(rawScore: number, horizon: string): number {
-  const table = calibration[horizon] ?? calibration["24h"];
-  if (!table || table.length === 0) return rawScore;
-  let result = table[0].confidence;
-  for (const bp of table) {
-    if (rawScore >= bp.minScore) result = bp.confidence;
-  }
-  return result;
-}
 `;
 
   await writeFile(OUT_PATH, fileContent, "utf-8");
