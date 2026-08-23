@@ -17,7 +17,8 @@
     "fx:compare": "tsx --env-file-if-exists=.env scripts/compare-fx-providers.ts",
     "fx:export-dataset": "tsx --env-file-if-exists=.env scripts/export-nbk-dataset.ts",
     "marketaux:test": "tsx --env-file-if-exists=.env scripts/marketaux-test.ts",
-    "fx:backfill-dataset": "tsx --env-file-if-exists=.env scripts/backfill-nbk-candles.ts"
+    "fx:backfill-dataset": "tsx --env-file-if-exists=.env scripts/backfill-nbk-candles.ts",
+    "forecast:backtest": "tsx --env-file-if-exists=.env scripts/backtest-forecast.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

@@ -16,8 +16,8 @@ export const newsConfig = {
   relevanceKeywords: {
     KZT: ["тенге", "kzt", "теңге"],
     USD: ["доллар", "usd"],
-    EUR: ["евро", "eur"],
-    RUB: ["рубл", "rub"],
+    EUR: ["евро", "еуро", "eur"],
+    RUB: ["рубль", "рубл", "rub"],
   } as Record<string, string[]>,
   deduplicated: {
     period: 4 * 60 * 60 * 1000,

@@ -1,6 +1,7 @@
 import { ForecastEngine, ForecastInput, ForecastResult } from "./types";
 import { computeTechnicalScore } from "./compute";
 import { forecastConfig } from "./config";
+import { calibrateConfidence } from "./calibration";
 
 export class RulesForecastEngine implements ForecastEngine {
   readonly version = "rules-v1";
@@ -40,7 +41,13 @@ export class RulesForecastEngine implements ForecastEngine {
         : blendedScore < -flatThreshold
           ? "down"
           : "flat";
-    const confidence = Math.abs(blendedScore);
+    // Правило 6 (CLAUDE.md): confidence — из калиброванной таблицы
+    // "скор → факт. частота попадания" (walk-forward бэктест, см.
+    // scripts/backtest-forecast.ts), не |blendedScore| напрямую.
+    const confidence = calibrateConfidence(
+      Math.abs(blendedScore),
+      input.horizon,
+    );
 
     const mid = input.close * (1 + blendedScore * maxMovePct);
     const band = input.indicators.atr14 / 2;
