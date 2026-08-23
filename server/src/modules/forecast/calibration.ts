@@ -15,56 +15,56 @@ export type CalibrationBreakpoint = { minScore: number; confidence: number };
 export const calibration: Record<string, CalibrationBreakpoint[]> = {
   "24h": [
     {
-      "minScore": 0,
-      "confidence": 0.328
+      minScore: 0,
+      confidence: 0.328,
     },
     {
-      "minScore": 0.1,
-      "confidence": 0.328
+      minScore: 0.1,
+      confidence: 0.328,
     },
     {
-      "minScore": 0.2,
-      "confidence": 0.328
+      minScore: 0.2,
+      confidence: 0.328,
     },
     {
-      "minScore": 0.30000000000000004,
-      "confidence": 0.328
+      minScore: 0.30000000000000004,
+      confidence: 0.328,
     },
     {
-      "minScore": 0.4,
-      "confidence": 0.353
+      minScore: 0.4,
+      confidence: 0.353,
     },
     {
-      "minScore": 0.5,
-      "confidence": 0.353
-    }
+      minScore: 0.5,
+      confidence: 0.353,
+    },
   ],
   "7d": [
     {
-      "minScore": 0,
-      "confidence": 0.078
+      minScore: 0,
+      confidence: 0.078,
     },
     {
-      "minScore": 0.1,
-      "confidence": 0.507
+      minScore: 0.1,
+      confidence: 0.507,
     },
     {
-      "minScore": 0.2,
-      "confidence": 0.511
+      minScore: 0.2,
+      confidence: 0.511,
     },
     {
-      "minScore": 0.30000000000000004,
-      "confidence": 0.511
+      minScore: 0.30000000000000004,
+      confidence: 0.511,
     },
     {
-      "minScore": 0.4,
-      "confidence": 0.511
+      minScore: 0.4,
+      confidence: 0.511,
     },
     {
-      "minScore": 0.5,
-      "confidence": 0.511
-    }
-  ]
+      minScore: 0.5,
+      confidence: 0.511,
+    },
+  ],
 };
 
 // Наименьший калиброванный score ниже самого нижнего бакета с данными —

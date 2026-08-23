@@ -124,7 +124,8 @@ function bucketize(samples: Sample[]): Bucket[] {
     const max = min + BUCKET_WIDTH;
     const inBucket = samples.filter(
       (s) =>
-        s.rawConfidence >= min && (max >= 1 ? s.rawConfidence <= max : s.rawConfidence < max),
+        s.rawConfidence >= min &&
+        (max >= 1 ? s.rawConfidence <= max : s.rawConfidence < max),
     );
     const hitRate =
       inBucket.length === 0
@@ -187,7 +188,8 @@ function printTable(title: string, buckets: Bucket[]): void {
   console.log("score bucket    n     raw hit rate");
   for (const b of buckets) {
     const label = `[${b.min.toFixed(1)}, ${b.max.toFixed(1)}${b.max >= 1 ? "]" : ")"}`;
-    const rate = b.hitRate === null ? "  n/a" : (b.hitRate * 100).toFixed(1) + "%";
+    const rate =
+      b.hitRate === null ? "  n/a" : (b.hitRate * 100).toFixed(1) + "%";
     console.log(`${label.padEnd(16)}${String(b.n).padEnd(6)}${rate}`);
   }
 }
