@@ -50,8 +50,16 @@ describe("clusterDuplicates", () => {
 
   it("непохожие статьи в одном окне — не кластеризуются", () => {
     const result = clusterDuplicates([
-      article("a1", "НБ РК повысил базовую ставку до 16 процентов", minutesAfter(0)),
-      article("a2", "Минфин обсудил проект бюджета на следующий год", minutesAfter(5)),
+      article(
+        "a1",
+        "НБ РК повысил базовую ставку до 16 процентов",
+        minutesAfter(0),
+      ),
+      article(
+        "a2",
+        "Минфин обсудил проект бюджета на следующий год",
+        minutesAfter(5),
+      ),
     ]);
 
     expect(result.get("a1")).toBe("a1");
@@ -64,7 +72,11 @@ describe("clusterDuplicates", () => {
     // за пределами newsConfig.deduplicated.period (4ч) — publishedAt важен
     // не меньше похожести текста.
     const result = clusterDuplicates([
-      article("a1", "НБ РК повысил базовую ставку до 16 процентов", minutesAfter(0)),
+      article(
+        "a1",
+        "НБ РК повысил базовую ставку до 16 процентов",
+        minutesAfter(0),
+      ),
       article(
         "a2",
         "НБ РК повысил базовую ставку до 16 процентов годовых",
