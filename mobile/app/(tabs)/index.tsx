@@ -3,9 +3,8 @@ import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { fontFamily, spacing, useTheme } from "../../src/theme";
-import { getCandles, getPairs, getQuote } from "../../src/api";
+import { getCandles, getPairs, getQuote, getForecast } from "../../src/api";
 import { deriveDelta, pairFlags, sparkPoints } from "../../src/lib/market";
-import { getTodaySummary } from "../../src/mock/watchlist";
 import {
   Card,
   GearIcon,
@@ -14,7 +13,9 @@ import {
   Text,
   TodayCard,
 } from "../../src/components";
-import type { WatchlistPair } from "../../src/types";
+import { DIRECTION_LABEL } from "../../src/lib/forecast";
+import { getTodaySummary } from "../../src/mock/watchlist";
+import type { WatchlistPair, TodaySummary } from "../../src/types";
 
 /**
  * Главный экран / watchlist (4.2). Порядок сверху вниз: карточка «Сегодня»
@@ -26,9 +27,10 @@ export default function WatchlistScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
 
-  // «Сегодня» — карточка с прогнозом, бэкенд его ещё не считает (мок, см.
-  // src/mock/watchlist.ts). Список пар ниже — реальные данные с бэкенда.
-  const today = getTodaySummary();
+  // Мок — только начальное состояние (TodayCard ждёт обязательный проп today,
+  // рендерится раньше ответа сети). useEffect ниже подменяет его прогнозом
+  // по паре №1 (getPairs() уже отсортирован по priority desc на бэкенде).
+  const [today, setToday] = useState<TodaySummary>(getTodaySummary());
   const [pairs, setPairs] = useState<WatchlistPair[]>([]);
 
   useEffect(() => {
@@ -36,6 +38,24 @@ export default function WatchlistScreen() {
 
     async function load() {
       const list = await getPairs();
+      if (list.length > 0) {
+        const forecast = await getForecast(list[0].id).catch(() => null);
+        if (!cancelled && forecast) {
+          const sentence = forecast.explanation?.split(".")[0];
+          setToday({
+            pairId: list[0].id,
+            ticker: `${list[0].base}/${list[0].quote}`,
+            direction: forecast.direction,
+            directionLabel: DIRECTION_LABEL[forecast.direction], // импорт из lib/forecast.ts
+            targetLow: forecast.targetLow,
+            targetHigh: forecast.targetHigh,
+            symbol: "₸",
+            summary: sentence
+              ? `${sentence}.`
+              : "Прогноз обновлён — подробности в карточке пары.",
+          });
+        }
+      }
       const rows = await Promise.all(
         list.map(async (p): Promise<WatchlistPair> => {
           const [quote, candles] = await Promise.all([
@@ -99,10 +119,12 @@ export default function WatchlistScreen() {
           <Text style={styles.sectionLabel} color={colors.textTertiary}>
             СЕГОДНЯ
           </Text>
-          <TodayCard
-            today={today}
-            onPress={() => router.push(`/pairs/${today.pairId}`)}
-          />
+          {today && (
+            <TodayCard
+              today={today}
+              onPress={() => router.push(`/pairs/${today.pairId}`)}
+            />
+          )}
         </View>
 
         <View style={styles.pairsHeader}>

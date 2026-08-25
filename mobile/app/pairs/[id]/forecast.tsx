@@ -4,13 +4,17 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { fontFamily, radius, spacing, useTheme } from "../../../src/theme";
 import { formatRange, formatRate } from "../../../src/lib/format";
-import { getForecast, getQuote } from "../../../src/api";
+import { getForecast, getForecastHistory, getQuote } from "../../../src/api";
 import {
   DIRECTION_LABEL,
   fallbackTargetRange,
+  toFullDrivers,
 } from "../../../src/lib/forecast";
-import { getFullForecast } from "../../../src/mock/fullForecast";
-import type { ForecastHorizon } from "../../../src/types";
+import type {
+  Driver,
+  ForecastHorizon,
+  FullForecast,
+} from "../../../src/types";
 import {
   AccuracyTrendChart,
   BellIcon,
@@ -44,17 +48,38 @@ export default function FullForecastScreen() {
   // остальное (confidenceExplanation, aiExplanation, драйверы с источниками,
   // accuracy, trend) требует LLM-шага и forecast_outcome (задача #9),
   // которых ещё нет. Выдумывать эти поля хуже, чем явно оставить мок.
-  const [forecast, setForecast] = useState(() => getFullForecast(id));
+  const [forecast, setForecast] = useState<FullForecast>({
+    pairId: id ?? "",
+    ticker: "",
+    direction: "flat",
+    directionLabel: DIRECTION_LABEL.flat,
+    targetLow: 0,
+    targetHigh: 0,
+    symbol: "₸",
+    currentRate: 0,
+    confidence: 0,
+    confidenceExplanation:
+      "Уверенность — согласованность технических индикаторов, новостного фона и исторической точности модели по этой паре.",
+    aiExplanation: "",
+    drivers: [],
+    accuracy: { total: 0, windowDays: 90, hitRatePct: 0 },
+    trend: { predicted: [], actual: [] },
+  });
 
   useEffect(() => {
     if (!id) return;
     let cancelled = false;
 
-    Promise.all([getQuote(id), getForecast(id).catch(() => null)])
-      .then(([quote, api]) => {
+    Promise.all([
+      getQuote(id),
+      getForecast(id).catch(() => null),
+      getForecastHistory(id).catch(() => null),
+    ])
+      .then(([quote, api, history]) => {
         if (cancelled) return;
         setForecast((prev) => ({
           ...prev,
+          ticker: `${quote.base}/${quote.quote}`,
           currentRate: quote.rate,
           ...(api
             ? {
@@ -63,8 +88,22 @@ export default function FullForecastScreen() {
                 targetLow: api.targetLow,
                 targetHigh: api.targetHigh,
                 confidence: Math.round(api.confidence * 100),
+                aiExplanation: api.explanation ?? prev.aiExplanation,
+                drivers: api.drivers
+                  ? toFullDrivers(api.drivers as Driver[])
+                  : prev.drivers,
               }
             : fallbackTargetRange(quote.rate)),
+          ...(history
+            ? {
+                accuracy: {
+                  total: history.total,
+                  windowDays: history.windowDays,
+                  hitRatePct: history.hitRatePct,
+                },
+                trend: history.trend,
+              }
+            : {}),
         }));
       })
       .catch((err) =>

@@ -35,6 +35,15 @@ export type ApiForecast = {
   explanation: string | null; // LLM-шаг ещё не подключён (этап 4, позже)
   drivers: unknown | null; // то же самое
 };
+export type ApiForecastHistory = {
+  pairId: string;
+  horizon: string;
+  windowDays: number;
+  total: number;
+  hitRatePct: number;
+  outcomes: boolean[];
+  trend: { predicted: number[]; actual: number[] };
+};
 
 /**
  * Самая частая проблема новичка: приложение не видит бэкенд.
@@ -99,4 +108,8 @@ export function getIndicators(id: string): Promise<ApiIndicators> {
  *  не ошибка; вызывающая сторона сама решает, чем заполнить состояние. */
 export function getForecast(id: string): Promise<ApiForecast> {
   return api<ApiForecast>(`/v1/pairs/${id}/forecast`);
+}
+
+export function getForecastHistory(id: string): Promise<ApiForecastHistory> {
+  return api<ApiForecastHistory>(`/v1/pairs/${id}/forecast/history`);
 }

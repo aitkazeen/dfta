@@ -7,6 +7,7 @@ import { formatRate, formatSignedPct } from "../../src/lib/format";
 import {
   getCandles,
   getForecast,
+  getForecastHistory,
   getIndicators,
   getQuote,
 } from "../../src/api";
@@ -80,6 +81,7 @@ export default function PairScreen() {
       // (воркер ещё не прогнал сутки для этой пары), не должно валить
       // загрузку курса/свечей/индикаторов, которые уже пришли успешно.
       const apiForecast = await getForecast(id).catch(() => null);
+      const apiForecastHistory = await getForecastHistory(id).catch(() => null);
       if (cancelled) return;
 
       setSnap((prev) => ({
@@ -95,8 +97,16 @@ export default function PairScreen() {
         candles: candles.map((c) => ({ o: c.o, h: c.h, l: c.l, c: c.c })),
         indicators: mapIndicators(indicators, quote.rate, prev.symbol),
         forecast: apiForecast
-          ? mapForecast(apiForecast, prev.forecast)
+          ? mapForecast(apiForecast, apiForecastHistory)
           : { ...prev.forecast, ...fallbackTargetRange(quote.rate) },
+        accuracy: apiForecastHistory
+          ? {
+              hitRatePct: apiForecastHistory.hitRatePct,
+              total: apiForecastHistory.total,
+              windowDays: apiForecastHistory.windowDays,
+              outcomes: apiForecastHistory.outcomes,
+            }
+          : prev.accuracy,
       }));
     }
 
