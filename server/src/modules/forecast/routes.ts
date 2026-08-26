@@ -52,7 +52,11 @@ export function forecastRoutes(deps: ForecastRoutesDeps) {
         where: {
           pairId: id,
           horizon: "24h",
-          createdAt: { gte: new Date(Date.now() - forecastConfig.historyWindowDays * 86_400_000) },
+          createdAt: {
+            gte: new Date(
+              Date.now() - forecastConfig.historyWindowDays * 86_400_000,
+            ),
+          },
         },
         include: { outcome: true },
         orderBy: { createdAt: "asc" }, // старые -> новые, важно для outcomes/trend
@@ -94,7 +98,6 @@ export function forecastRoutes(deps: ForecastRoutesDeps) {
         outcomes,
         trend,
       };
-
     });
   };
 }

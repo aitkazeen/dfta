@@ -10,11 +10,7 @@ import {
   fallbackTargetRange,
   toFullDrivers,
 } from "../../../src/lib/forecast";
-import type {
-  Driver,
-  ForecastHorizon,
-  FullForecast,
-} from "../../../src/types";
+import type { Driver, ForecastHorizon, FullForecast } from "../../../src/types";
 import {
   AccuracyTrendChart,
   BellIcon,
