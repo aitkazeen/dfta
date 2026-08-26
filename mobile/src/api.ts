@@ -35,6 +35,17 @@ export type ApiForecast = {
   explanation: string | null; // LLM-шаг ещё не подключён (этап 4, позже)
   drivers: unknown | null; // то же самое
 };
+/** Одна статья по паре — см. server/src/modules/news/routes.ts. sentiment
+ *  null, если ни у источника, ни у LLM-классификатора не нашлось значения
+ *  (см. CLAUDE.md, запись 2026-08-23 про no-op-фабрики). */
+export type ApiNewsArticle = {
+  title: string;
+  url: string;
+  source: string;
+  publishedAt: string;
+  sentiment: number | null;
+  impactScore: number;
+};
 export type ApiForecastHistory = {
   pairId: string;
   horizon: string;
@@ -112,4 +123,8 @@ export function getForecast(id: string): Promise<ApiForecast> {
 
 export function getForecastHistory(id: string): Promise<ApiForecastHistory> {
   return api<ApiForecastHistory>(`/v1/pairs/${id}/forecast/history`);
+}
+
+export function getNews(id: string, limit = 20): Promise<ApiNewsArticle[]> {
+  return api<ApiNewsArticle[]>(`/v1/pairs/${id}/news?limit=${limit}`);
 }

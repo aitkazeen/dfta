@@ -78,6 +78,9 @@ export type NewsArticle = {
   time: string; // "28.07, 09:12"
   title: string;
   tag: string; // "Влияет на USD/KZT"
+  // Цвет бейджа tag по тональности статьи (экран новостей 4.5). Не задан —
+  // NewsItem рисует нейтральный бейдж, как раньше (мок пары его не задаёт).
+  tone?: IndicatorTone;
 };
 
 export type Forecast = {
