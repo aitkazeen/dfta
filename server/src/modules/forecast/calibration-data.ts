@@ -1,5 +1,5 @@
 // СГЕНЕРИРОВАНО: npm run forecast:backtest (server/scripts/backtest-forecast.ts)
-// 2026-08-23 — не редактировать руками, перегенерировать бэктестом.
+// 2026-08-26 — не редактировать руками, перегенерировать бэктестом.
 //
 // Таблица монотонна по построению (isotonic regression поверх walk-forward
 // бэктеста на 2-летнем датасете НБ РК) — выше сырой |blendedScore|
@@ -32,11 +32,11 @@ export const calibrationTable: Record<string, CalibrationBreakpoint[]> = {
     },
     {
       minScore: 0.4,
-      confidence: 0.353,
+      confidence: 0.351,
     },
     {
       minScore: 0.5,
-      confidence: 0.353,
+      confidence: 0.351,
     },
   ],
   "7d": [
@@ -46,23 +46,23 @@ export const calibrationTable: Record<string, CalibrationBreakpoint[]> = {
     },
     {
       minScore: 0.1,
-      confidence: 0.507,
+      confidence: 0.508,
     },
     {
       minScore: 0.2,
-      confidence: 0.511,
+      confidence: 0.512,
     },
     {
       minScore: 0.30000000000000004,
-      confidence: 0.511,
+      confidence: 0.512,
     },
     {
       minScore: 0.4,
-      confidence: 0.511,
+      confidence: 0.512,
     },
     {
       minScore: 0.5,
-      confidence: 0.511,
+      confidence: 0.512,
     },
   ],
 };
