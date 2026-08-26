@@ -16,19 +16,19 @@ export const calibrationTable: Record<string, CalibrationBreakpoint[]> = {
   "24h": [
     {
       minScore: 0,
-      confidence: 0.328,
+      confidence: 0.32,
     },
     {
       minScore: 0.1,
-      confidence: 0.328,
+      confidence: 0.32,
     },
     {
       minScore: 0.2,
-      confidence: 0.328,
+      confidence: 0.32,
     },
     {
       minScore: 0.30000000000000004,
-      confidence: 0.328,
+      confidence: 0.32,
     },
     {
       minScore: 0.4,
@@ -42,7 +42,7 @@ export const calibrationTable: Record<string, CalibrationBreakpoint[]> = {
   "7d": [
     {
       minScore: 0,
-      confidence: 0.078,
+      confidence: 0.342,
     },
     {
       minScore: 0.1,

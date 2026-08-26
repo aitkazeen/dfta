@@ -7,7 +7,7 @@ import { computeIndicators } from "./modules/indicators/compute.js";
 import { getLatestIndicators } from "./modules/indicators/repository";
 import { RulesForecastEngine } from "./modules/forecast/rules-engine.js";
 import { resolveForecastOutcome } from "./modules/forecast/outcomes.js";
-import { forecastConfig } from "./modules/forecast/config.js";
+import { forecastConfig, horizonDays } from "./modules/forecast/config.js";
 import { createExplainer } from "./modules/forecast/explainer.factory.js";
 import type { Direction } from "./modules/forecast/types.js";
 import { createNewsSources } from "./modules/news/sources.factory.js";
@@ -113,8 +113,25 @@ async function resolvePendingOutcomes(): Promise<void> {
       });
       if (!candle) continue;
 
-      const features = forecast.features as { close?: number };
+      const features = forecast.features as {
+        close?: number;
+        indicators?: { atr14?: number };
+      };
       if (typeof features.close !== "number") continue; // прогнозы без сохранённого close не резолвим (не должно случаться)
+
+      // Мёртвая зона факта — волатильностно-относительная (см. outcomes.ts):
+      // flatBandAtrMult * atr14 * sqrt(horizonDays). atr14 берём из снимка
+      // features, посчитанного в момент прогноза. Если его нет (прогноз по
+      // no-atr пути), падаем на старый фиксированный 0.1% от цены, чтобы зона
+      // всегда была определена.
+      const atr14 = features.indicators?.atr14;
+      const days = horizonDays[forecast.horizon as "24h" | "7d"] ?? 1;
+      const flatBand =
+        atr14 !== undefined && atr14 > 0
+          ? forecastConfig.decision.flatBandAtrMult * atr14 * Math.sqrt(days)
+          : features.close *
+            forecastConfig.decision.flatThreshold *
+            forecastConfig.decision.maxMovePct;
 
       const actualClose = candle.close.toNumber();
       const { wasCorrect, absError } = resolveForecastOutcome({
@@ -123,9 +140,7 @@ async function resolvePendingOutcomes(): Promise<void> {
         targetLow: forecast.targetLow.toNumber(),
         targetHigh: forecast.targetHigh.toNumber(),
         actualClose,
-        deadZonePct:
-          forecastConfig.decision.flatThreshold *
-          forecastConfig.decision.maxMovePct,
+        flatBand,
       });
 
       await db.forecastOutcome.create({
