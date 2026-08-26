@@ -19,6 +19,7 @@
     "marketaux:test": "tsx --env-file-if-exists=.env scripts/marketaux-test.ts",
     "fx:backfill-dataset": "tsx --env-file-if-exists=.env scripts/backfill-nbk-candles.ts",
     "forecast:backtest": "tsx --env-file-if-exists=.env scripts/backtest-forecast.ts",
+    "forecast:tune": "tsx --env-file-if-exists=.env scripts/tune-weights.ts"
     "forecast:tune-weights": "tsx --env-file-if-exists=.env scripts/tune-forecast-weights.ts"
   },
   "prisma": {

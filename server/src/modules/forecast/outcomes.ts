@@ -6,11 +6,14 @@ type ResolveOutcomeInput = {
   targetLow: number;
   targetHigh: number;
   actualClose: number;
-  // Минимальное % изменение цены, которое считается направленным движением,
-  // а не шумом — та же логика, что и flatThreshold у technicalScore
-  // (см. RulesForecastEngine.predict): deadZonePct = flatThreshold * maxMovePct,
-  // выведено из тех же чисел конфига, не отдельный произвольный порог.
-  deadZonePct: number;
+  // Полуширина "мёртвой зоны" в АБСОЛЮТНЫХ единицах цены (не процент):
+  // факт считается 'flat', если |actualClose - originalClose| <= flatBand.
+  // Считается вызывающим как flatBandAtrMult * atr14 * sqrt(horizonDays)
+  // (см. forecastConfig.decision.flatBandAtrMult) — волатильностно- и
+  // горизонт-относительная зона шума, а не фиксированный процент. Это чинит
+  // провал бакета [0,0.1) на 7д, где фиксированные 0.1% делали факт
+  // 'flat' практически недостижимым.
+  flatBand: number;
 };
 
 export function resolveForecastOutcome(input: ResolveOutcomeInput): {
@@ -23,12 +26,12 @@ export function resolveForecastOutcome(input: ResolveOutcomeInput): {
     targetLow,
     targetHigh,
     actualClose,
-    deadZonePct,
+    flatBand,
   } = input;
 
-  const pctChange = (actualClose - originalClose) / originalClose;
+  const move = actualClose - originalClose;
   const actualDirection: Direction =
-    pctChange > deadZonePct ? "up" : pctChange < -deadZonePct ? "down" : "flat";
+    move > flatBand ? "up" : move < -flatBand ? "down" : "flat";
 
   const targetMid = (targetLow + targetHigh) / 2;
 

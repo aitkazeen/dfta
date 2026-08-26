@@ -31,10 +31,6 @@ import { writeFile } from "node:fs/promises";
 import path from "node:path";
 
 const HORIZONS = { "24h": 1, "7d": 7 } as const;
-// deadZonePct выведен из тех же чисел конфига, что и в outcomes.ts
-// (см. комментарий там) — не отдельный произвольный порог.
-const DEAD_ZONE_PCT =
-  forecastConfig.decision.flatThreshold * forecastConfig.decision.maxMovePct;
 const BUCKET_WIDTH = 0.1;
 const OUT_PATH = path.resolve(
   import.meta.dirname,
@@ -44,7 +40,11 @@ const OUT_PATH = path.resolve(
 const db = new PrismaClient();
 const engine = new RulesForecastEngine();
 
-type Sample = { rawConfidence: number; wasCorrect: boolean };
+type Sample = {
+  rawConfidence: number;
+  wasCorrect: boolean;
+  predicted: "up" | "down" | "flat";
+};
 
 async function backtestPair(
   pairId: string,
@@ -93,13 +93,19 @@ async function backtestPair(
     });
 
     const actualClose = closes[i + horizonDays];
+    // Мёртвая зона факта — волатильностно-относительная, как в проде
+    // (см. outcomes.ts / worker.ts): flatBandAtrMult * atr14 * sqrt(гориз.).
+    const flatBand =
+      forecastConfig.decision.flatBandAtrMult *
+      indicators.atr14 *
+      Math.sqrt(horizonDays);
     const { wasCorrect } = resolveForecastOutcome({
       direction: result.direction,
       originalClose: closes[i],
       targetLow: result.targetLow,
       targetHigh: result.targetHigh,
       actualClose,
-      deadZonePct: DEAD_ZONE_PCT,
+      flatBand,
     });
 
     // Важно: НЕ result.confidence — predict() сам зовёт calibrateConfidence
@@ -110,7 +116,7 @@ async function backtestPair(
     const rawConfidence = Math.abs(
       (result.features as { blendedScore: number }).blendedScore,
     );
-    samples.push({ rawConfidence, wasCorrect });
+    samples.push({ rawConfidence, wasCorrect, predicted: result.direction });
   }
 
   return samples;
@@ -183,6 +189,31 @@ function calibrate(
   }));
 }
 
+// Честная сводка (CLAUDE.md §"Юридические ограничения": показываем реальную
+// точность). Overall — доля попаданий по всем прогнозам, включая 'flat';
+// её легко раздуть, предсказывая 'flat' чаще. Поэтому рядом — directional:
+// среди дней, где модель ВЗЯЛА направление (up/down), как часто оно совпало
+// с фактом. Это число не накрутить увеличением доли 'flat', оно и есть
+// продуктово-значимая точность.
+function printSummary(title: string, samples: Sample[]): void {
+  const overall = samples.filter((s) => s.wasCorrect).length / samples.length;
+  const directional = samples.filter((s) => s.predicted !== "flat");
+  const dirCorrect = directional.filter((s) => s.wasCorrect).length;
+  const flatShare = 1 - directional.length / samples.length;
+  const pct = (x: number) => (x * 100).toFixed(1) + "%";
+  console.log(`\n${title}`);
+  console.log(`  overall hit rate:      ${pct(overall)} (n=${samples.length})`);
+  console.log(
+    `  directional coverage:  ${pct(directional.length / samples.length)} (доля дней с направлением)`,
+  );
+  console.log(
+    `  directional precision: ${
+      directional.length ? pct(dirCorrect / directional.length) : "n/a"
+    } (n=${directional.length}, честная точность)`,
+  );
+  console.log(`  flat share:            ${pct(flatShare)}`);
+}
+
 function printTable(title: string, buckets: Bucket[]): void {
   console.log(`\n${title}`);
   console.log("score bucket    n     raw hit rate");
@@ -207,6 +238,7 @@ async function main(): Promise<void> {
       const samples = await backtestPair(pair.id, days);
       allSamples = allSamples.concat(samples);
     }
+    printSummary(`Horizon ${horizon} — сводка`, allSamples);
     const buckets = bucketize(allSamples);
     printTable(
       `Horizon ${horizon} — ${allSamples.length} samples across ${pairs.length} pairs`,
