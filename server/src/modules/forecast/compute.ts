@@ -7,7 +7,10 @@ function clamp(x: number, min: number, max: number) {
 
 // Относительная разница first/second (например close vs ema20), нормализованная
 // порогом deviation. null — если хотя бы одно значение ещё не посчитано.
-function difference(
+// Экспортировано для server/scripts/tune-forecast-weights.ts — скрипту подбора
+// весов (этап 4) нужны те же нормализации по отдельным сигналам, что и здесь,
+// без дублирования формул.
+export function difference(
   first: number | undefined,
   second: number | undefined,
   deviation: number,
@@ -18,14 +21,14 @@ function difference(
 
 // RSI/Stochastic %K уже 0..100 — просто центрируем на 50, клэмп на всякий
 // случай (Stochastic формально может чуть выйти за 0..100 на кривых данных).
-function centered100(value: number | undefined): number | null {
+export function centered100(value: number | undefined): number | null {
   if (value === undefined) return null;
   return clamp((value - 50) / 50, -1, 1);
 }
 
 // MACD не заперт в диапазон — делим на ATR той же свечи, чтобы получить
 // сопоставимую величину между парами с разным порядком цены.
-function atrRelative(
+export function atrRelative(
   value: number | undefined,
   atr: number | undefined,
 ): number | null {
@@ -40,7 +43,7 @@ function atrRelative(
 
 // Взвешенное среднее по не-null сигналам. Отсутствующий сигнал исключается
 // целиком (и из числителя, и из знаменателя) — не считается нейтральным нулём.
-function weightedAverage(
+export function weightedAverage(
   entries: { score: number | null; weight: number }[],
 ): number | null {
   // Number.isFinite отсекает не только null, но и NaN/±Infinity — второй

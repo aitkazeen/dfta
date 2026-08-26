@@ -58,6 +58,8 @@ export const forecastConfig = {
     atr14: { category: "volatility", weight: 0, normalize: "atrRelative" },
     bb_width: { category: "volatility", weight: 0, normalize: "atrRelative" },
   } satisfies Record<string, SignalConfig>,
+
+  historyWindowDays: 90,
 };
 
 // Горизонт прогноза в днях — общий источник правды для резолва факта

@@ -1,7 +1,7 @@
 import { StyleSheet, View } from "react-native";
 import { fontFamily, radius, spacing, useTheme } from "../theme";
 import { Text } from "./Text";
-import type { NewsArticle } from "../types";
+import type { IndicatorTone, NewsArticle } from "../types";
 
 type Props = {
   article: NewsArticle;
@@ -16,6 +16,15 @@ type Props = {
  */
 export function NewsItem({ article, first }: Props) {
   const { colors } = useTheme();
+
+  // tone не задан (мок пары в pairs/[id].tsx) — нейтральный бейдж, как раньше.
+  const tonePalette: Record<IndicatorTone, { bg: string; fg: string }> = {
+    up: { bg: colors.upBg, fg: colors.up },
+    down: { bg: colors.downBg, fg: colors.down },
+    warn: { bg: colors.bgSurfaceRaised, fg: colors.warn },
+    neutral: { bg: colors.bgSurfaceRaised, fg: colors.textSecondary },
+  };
+  const tag = tonePalette[article.tone ?? "neutral"];
 
   return (
     <View
@@ -35,8 +44,8 @@ export function NewsItem({ article, first }: Props) {
       <Text numberOfLines={2} style={styles.title}>
         {article.title}
       </Text>
-      <View style={[styles.tag, { backgroundColor: colors.bgSurfaceRaised }]}>
-        <Text variant="caption" color={colors.textSecondary}>
+      <View style={[styles.tag, { backgroundColor: tag.bg }]}>
+        <Text variant="caption" color={tag.fg}>
           {article.tag}
         </Text>
       </View>

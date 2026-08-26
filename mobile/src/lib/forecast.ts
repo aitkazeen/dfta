@@ -1,11 +1,22 @@
-import type { ApiForecast } from "../api";
-import type { Direction, Driver, Forecast } from "../types";
+import type { ApiForecast, ApiForecastHistory } from "../api";
+import type {
+  Direction,
+  Driver,
+  DriverCategory,
+  Forecast,
+  FullForecastDriver,
+} from "../types";
 
 export const DIRECTION_LABEL: Record<Direction, string> = {
   up: "Рост",
   down: "Падение",
   flat: "Без изменений",
 };
+
+// Дублирует forecastConfig.historyWindowDays на бэкенде (server/src/modules/forecast/config.ts) —
+// импортировать оттуда нельзя, мобильный код не видит серверный. Используется только как
+// подпись окна, когда история ещё не пришла (см. mapForecast ниже); при обновлении держи в синхроне.
+const DEFAULT_HISTORY_WINDOW_DAYS = 90;
 
 /**
  * Пока нет реального прогноза (свежедобавленная пара, воркер ещё не прогнал
@@ -27,7 +38,10 @@ export function fallbackTargetRange(rate: number): {
  * explanation/drivers у ответа API бывают null — если ANTHROPIC_API_KEY не
  * задан на бэкенде или LLM-вызов не удался, подставляем пустые значения.
  */
-export function mapForecast(api: ApiForecast, prev: Forecast): Forecast {
+export function mapForecast(
+  api: ApiForecast,
+  history: ApiForecastHistory | null,
+): Forecast {
   return {
     direction: api.direction,
     directionLabel: DIRECTION_LABEL[api.direction],
@@ -36,7 +50,23 @@ export function mapForecast(api: ApiForecast, prev: Forecast): Forecast {
     confidence: Math.round(api.confidence * 100),
     explanation: api.explanation ?? "",
     drivers: (api.drivers as Driver[] | null) ?? [],
-    enginePairAccuracyPct: prev.enginePairAccuracyPct,
-    enginePairWindowDays: prev.enginePairWindowDays,
+    enginePairAccuracyPct: history?.hitRatePct ?? 0,
+    enginePairWindowDays: history?.windowDays ?? DEFAULT_HISTORY_WINDOW_DAYS, // хотя бы окно показать честно, даже без статистики
   };
+}
+
+const CATEGORY_SOURCE: Record<DriverCategory, string> = {
+  technical: "Технический анализ",
+  news: "Новостной анализ",
+  regulator: "Регулятор",
+  global: "Мировой рынок",
+};
+
+export function toFullDrivers(drivers: Driver[]): FullForecastDriver[] {
+  return drivers.map((d) => ({
+    category: d.category,
+    what: d.text,
+    impact: d.text, // короче показывать нечего — второго предложения LLM не отдаёт
+    source: CATEGORY_SOURCE[d.category],
+  }));
 }
