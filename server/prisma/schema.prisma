@@ -145,3 +145,38 @@ model NewsEntity {
   @@id([articleId, entityType, entityValue])
   @@map("news_entity")
 }
+
+// authProvider всегда 'apple' сейчас — Google подключаем в этом же этапе, но
+// первый релиз iOS-only (Android отложен), поэтому Google Sign-In пока не
+// протестирован живьём. Модель уже провайдер-агностичная, чтобы не переделывать.
+model AppUser {
+  id           String   @id @default(cuid())
+  authProvider String   @map("auth_provider") // 'apple' | 'google'
+  authSub      String   @map("auth_sub")
+  email        String?
+  createdAt    DateTime @default(now()) @map("created_at")
+  tz           String   @default("Asia/Almaty")
+  locale       String   @default("ru")
+  plan         String   @default("free")
+
+  deviceTokens DeviceToken[]
+
+  @@unique([authProvider, authSub])
+  @@map("app_user")
+}
+
+// platform хранит 'ios' | 'android' с самого начала, хотя Android-релиза
+// пока нет — сама модель ничего не знает про то, что мы не собираем Android,
+// это чисто вопрос EAS-профилей сборки, не схемы.
+model DeviceToken {
+  id         String   @id @default(cuid())
+  userId     String   @map("user_id")
+  platform   String   // 'ios' | 'android'
+  token      String   @unique
+  lastSeenAt DateTime @default(now()) @map("last_seen_at")
+
+  user AppUser @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@map("device_token")
+}
