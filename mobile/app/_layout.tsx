@@ -11,9 +11,11 @@ import {
   useFonts,
 } from "@expo-google-fonts/inter";
 import { darkColors } from "../src/theme";
+import { useAuthStore } from "../src/store/auth";
 
-// Держим splash, пока не загрузятся шрифты — иначе первый кадр
-// отрисуется системным шрифтом и «прыгнет» на Inter.
+// Держим splash, пока не загрузятся шрифты и не восстановится сессия —
+// иначе экран "Ещё" на миг покажет кнопку входа перед тем, как узнает,
+// что пользователь уже залогинен (restore() дергает /v1/auth/refresh).
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
@@ -23,12 +25,20 @@ export default function RootLayout() {
     Inter_600SemiBold,
     Inter_700Bold,
   });
+  const authStatus = useAuthStore((s) => s.status);
+  const restoreAuth = useAuthStore((s) => s.restore);
 
   useEffect(() => {
-    if (fontsLoaded) SplashScreen.hideAsync();
-  }, [fontsLoaded]);
+    restoreAuth();
+  }, [restoreAuth]);
 
-  if (!fontsLoaded) return null;
+  useEffect(() => {
+    if (fontsLoaded && authStatus !== "loading") SplashScreen.hideAsync();
+  }, [fontsLoaded, authStatus]);
+
+  if (!fontsLoaded || authStatus === "loading") return null;
+
+  const isSignedIn = authStatus === "signedIn";
 
   return (
     <SafeAreaProvider>
@@ -40,7 +50,17 @@ export default function RootLayout() {
           headerShown: false,
           contentStyle: { backgroundColor: darkColors.bgBase },
         }}
-      />
+      >
+        <Stack.Protected guard={!isSignedIn}>
+          <Stack.Screen name="login" />
+        </Stack.Protected>
+
+        <Stack.Protected guard={isSignedIn}>
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="pairs/[id]" />
+          <Stack.Screen name="pairs/[id]/forecast" />
+        </Stack.Protected>
+      </Stack>
     </SafeAreaProvider>
   );
 }

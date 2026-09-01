@@ -1,6 +1,8 @@
 export { Text } from "./Text";
 export { Card } from "./Card";
 export { IconButton } from "./IconButton";
+export { AppleSignInCard } from "./AppleSignInCard";
+export { GoogleSignInCard } from "./GoogleSignInCard";
 export { DirectionBadge } from "./DirectionBadge";
 export { Sparkline } from "./Sparkline";
 export { PairRow } from "./PairRow";

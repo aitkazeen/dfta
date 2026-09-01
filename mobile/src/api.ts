@@ -90,12 +90,42 @@ function resolveHost(): string {
 
 export const API_URL = `http://${resolveHost()}:3000`;
 
-export async function api<T>(path: string): Promise<T> {
-  const res = await fetch(`${API_URL}${path}`);
+/** Отличает 401 (протух/невалиден токен, есть смысл рефрешить) от прочих
+ *  сетевых ошибок — на нём строится retry-on-401 в useAuthStore. */
+export class ApiError extends Error {
+  constructor(
+    public status: number,
+    message: string,
+  ) {
+    super(message);
+  }
+}
+
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(`${API_URL}${path}`, init);
   if (!res.ok) {
-    throw new Error(`${res.status} ${res.statusText}`);
+    throw new ApiError(res.status, `${res.status} ${res.statusText}`);
   }
   return res.json() as Promise<T>;
+}
+
+function post<T>(
+  path: string,
+  body: unknown,
+  accessToken?: string,
+): Promise<T> {
+  return request<T>(path, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+    },
+    body: JSON.stringify(body),
+  });
+}
+
+export async function api<T>(path: string): Promise<T> {
+  return request<T>(path);
 }
 
 export function getPairs(): Promise<ApiPair[]> {
@@ -127,4 +157,39 @@ export function getForecastHistory(id: string): Promise<ApiForecastHistory> {
 
 export function getNews(id: string, limit = 20): Promise<ApiNewsArticle[]> {
   return api<ApiNewsArticle[]>(`/v1/pairs/${id}/news?limit=${limit}`);
+}
+
+// --- Auth (этап 5, см. server/src/modules/auth/routes.ts) ---
+
+export type ApiAuthUser = { id: string; email: string | null };
+export type ApiAuthTokens = { accessToken: string; refreshToken: string };
+
+/** identityToken — из AppleAuthentication.signInAsync() на клиенте. */
+export function signInWithApple(
+  identityToken: string,
+): Promise<ApiAuthTokens & { user: ApiAuthUser }> {
+  return post("/v1/auth/apple", { identityToken });
+}
+
+/** idToken — credential из Google Identity Services (см. GoogleSignInCard.web.tsx).
+ *  Поле называется idToken, не identityToken — так его ждёт /v1/auth/google
+ *  (server/src/modules/auth/routes.ts). */
+export function signInWithGoogle(
+  idToken: string,
+): Promise<ApiAuthTokens & { user: ApiAuthUser }> {
+  return post("/v1/auth/google", { idToken });
+}
+
+export function refreshTokens(refreshToken: string): Promise<ApiAuthTokens> {
+  return post("/v1/auth/refresh", { refreshToken });
+}
+
+/** Защищённый роут — требует access-токен. platform всегда "ios" в первом
+ *  релизе (см. project_stage5_ios_only), но бэкенд принимает и "android". */
+export function registerDevice(
+  accessToken: string,
+  deviceToken: string,
+  platform: "ios" | "android",
+): Promise<{ id: string }> {
+  return post("/v1/me/devices", { token: deviceToken, platform }, accessToken);
 }
