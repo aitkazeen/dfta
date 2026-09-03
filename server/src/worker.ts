@@ -14,6 +14,7 @@ import { createNewsSources } from "./modules/news/sources.factory.js";
 import { createSentimentClassifier } from "./modules/news/sentiment-classifier.factory.js";
 import { runNewsPipeline } from "./modules/news/pipeline.js";
 import { getNewsScore } from "./modules/news/repository.js";
+import { evaluateAlerts } from "./modules/notifications/evaluate.js";
 
 const QUEUE_NAME = "quotes";
 // НБ РК публикует один фиксинг в сутки (см. nbk.ts) — курс внутри дня не
@@ -23,9 +24,15 @@ const QUEUE_NAME = "quotes";
 const POLL_INTERVAL_MS = 6 * 60 * 60 * 1000;
 
 const NEWS_QUEUE_NAME = "news";
+
+const NOTIFICATIONS_QUEUE_NAME = "notifications";
 // RSS/Marketaux обновляются в течение дня, не раз в сутки как НБ РК —
 // опрашиваем чаще (roadmap §1, архитектурная схема).
 const NEWS_POLL_INTERVAL_MS = 15 * 60 * 1000;
+// Тот же интервал, что у новостей: daily-окно длится 3 часа, этого
+// достаточно часто, чтобы не пропустить окно, и достаточно редко, чтобы
+// не спамить дедуп-проверками.
+const NOTIFICATIONS_POLL_INTERVAL_MS = 15 * 60 * 1000;
 
 const HORIZON_MS: Record<string, number> = {
   "24h": 24 * 60 * 60 * 1000,
@@ -50,6 +57,7 @@ const sentimentClassifier = createSentimentClassifier(connection);
 
 const queue = new Queue(QUEUE_NAME, { connection });
 const newsQueue = new Queue(NEWS_QUEUE_NAME, { connection });
+const notificationsQueue = new Queue(NOTIFICATIONS_QUEUE_NAME, { connection });
 
 async function pollAllPairs(): Promise<void> {
   const pairs = await db.currencyPair.findMany({ where: { isActive: true } });
@@ -325,12 +333,20 @@ const worker = new Worker(QUEUE_NAME, () => pollAllPairs(), { connection });
 const newsWorker = new Worker(NEWS_QUEUE_NAME, () => collectNews(), {
   connection,
 });
+const notificationsWorker = new Worker(
+  NOTIFICATIONS_QUEUE_NAME,
+  () => evaluateAlerts(db),
+  { connection },
+);
 
 worker.on("failed", (job: Job | undefined, err: Error) => {
   console.error(`[worker] job ${job?.id} failed:`, err.message);
 });
 newsWorker.on("failed", (job: Job | undefined, err: Error) => {
   console.error(`[news-worker] job ${job?.id} failed:`, err.message);
+});
+notificationsWorker.on("failed", (job: Job | undefined, err: Error) => {
+  console.error(`[notifications-worker] job ${job?.id} failed:`, err.message);
 });
 
 // Регистрируем повторяющуюся задачу при каждом старте — upsertJobScheduler
@@ -346,8 +362,15 @@ await newsQueue.upsertJobScheduler("collect-news", {
   every: NEWS_POLL_INTERVAL_MS,
   immediately: true,
 });
+await notificationsQueue.upsertJobScheduler("evaluate-alerts", {
+  every: NOTIFICATIONS_POLL_INTERVAL_MS,
+  immediately: true,
+});
 
 console.log(`[worker] started, polling every ${POLL_INTERVAL_MS / 1000}s`);
 console.log(
   `[news-worker] started, polling every ${NEWS_POLL_INTERVAL_MS / 1000}s`,
+);
+console.log(
+  `[notifications-worker] started, polling every ${NOTIFICATIONS_POLL_INTERVAL_MS / 1000}s`,
 );

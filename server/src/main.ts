@@ -9,6 +9,7 @@ import { marketRoutes } from "./modules/market/routes.js";
 import { forecastRoutes } from "./modules/forecast/routes.js";
 import { newsRoutes } from "./modules/news/routes.js";
 import { authRoutes } from "./modules/auth/routes.js";
+import { notificationRoutes } from "./modules/notifications/routes.js";
 
 const db = new PrismaClient();
 const app = Fastify({ logger: true });
@@ -33,6 +34,7 @@ await app.register(marketRoutes({ db, quoteProvider }));
 await app.register(forecastRoutes({ db }));
 await app.register(newsRoutes({ db }));
 await app.register(authRoutes({ db }));
+await app.register(notificationRoutes({ db }));
 
 const port = Number(process.env.PORT ?? 3000);
 
