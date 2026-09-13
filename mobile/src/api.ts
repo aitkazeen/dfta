@@ -193,3 +193,82 @@ export function registerDevice(
 ): Promise<{ id: string }> {
   return post("/v1/me/devices", { token: deviceToken, platform }, accessToken);
 }
+
+// --- Алерты (этап 5, см. server/src/modules/notifications/routes.ts) ---
+
+/** 4 типа триггеров из roadmap §7. Форма params зависит от type — см.
+ *  checkThresholdTrigger/… в server/.../notifications/evaluate.ts:
+ *    daily      -> {}                                (утренний прогноз)
+ *    threshold  -> { value: number; direction: "above" | "below" }
+ *    movement   -> { atrMultiplier?: number }        (по умолчанию 2×ATR)
+ *    news       -> { minImpactScore: number }        */
+export type AlertType = "daily" | "threshold" | "movement" | "news";
+
+/** "HH:mm" в tz пользователя (app_user.tz). null — без тихих часов. */
+export type QuietHours = { start: string; end: string };
+
+export type ApiAlertRule = {
+  id: string;
+  pairId: string;
+  type: AlertType;
+  params: Record<string, unknown>;
+  quietHours: QuietHours | null;
+  isActive: boolean;
+};
+
+export type CreateAlertInput = {
+  pairId: string;
+  type: AlertType;
+  params: Record<string, unknown>;
+  quietHours?: QuietHours | null;
+};
+
+export type UpdateAlertInput = {
+  isActive?: boolean;
+  params?: Record<string, unknown>;
+  quietHours?: QuietHours | null;
+};
+
+function authHeader(accessToken: string): Record<string, string> {
+  return { Authorization: `Bearer ${accessToken}` };
+}
+
+export function getAlerts(accessToken: string): Promise<ApiAlertRule[]> {
+  return request<ApiAlertRule[]>("/v1/me/alerts", {
+    headers: authHeader(accessToken),
+  });
+}
+
+export function createAlert(
+  accessToken: string,
+  input: CreateAlertInput,
+): Promise<ApiAlertRule> {
+  return post<ApiAlertRule>("/v1/me/alerts", input, accessToken);
+}
+
+export function updateAlert(
+  accessToken: string,
+  id: string,
+  patch: UpdateAlertInput,
+): Promise<ApiAlertRule> {
+  return request<ApiAlertRule>(`/v1/me/alerts/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...authHeader(accessToken) },
+    body: JSON.stringify(patch),
+  });
+}
+
+/** DELETE отдаёт 204 без тела — не гоняем через request(), тот всегда
+ *  делает res.json() и упал бы на пустом ответе. */
+export async function deleteAlert(
+  accessToken: string,
+  id: string,
+): Promise<void> {
+  const res = await fetch(`${API_URL}/v1/me/alerts/${id}`, {
+    method: "DELETE",
+    headers: authHeader(accessToken),
+  });
+  if (!res.ok) {
+    throw new ApiError(res.status, `${res.status} ${res.statusText}`);
+  }
+}
