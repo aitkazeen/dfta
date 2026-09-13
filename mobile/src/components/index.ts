@@ -23,6 +23,8 @@ export {
   Disclaimer,
   LEGAL_DISCLAIMER_FULL,
   LEGAL_DISCLAIMER_SHORT,
+  LEGAL_AI_DISCLOSURE,
+  LEGAL_ACCURACY,
 } from "./Disclaimer";
 export { ComingSoon } from "./ComingSoon";
 export * from "./icons";

@@ -1,4 +1,4 @@
-import { StyleSheet, View } from "react-native";
+import { ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { spacing, useTheme } from "../../src/theme";
 import {
@@ -7,6 +7,9 @@ import {
   IconButton,
   AppleSignInCard,
   GoogleSignInCard,
+  LEGAL_DISCLAIMER_FULL,
+  LEGAL_ACCURACY,
+  LEGAL_AI_DISCLOSURE,
 } from "../../src/components";
 import { useAuthStore } from "../../src/store/auth";
 
@@ -35,7 +38,10 @@ export default function MoreScreen() {
         <Text variant="h2">Ещё</Text>
       </View>
 
-      <View style={styles.content}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.content}
+      >
         {status === "signedIn" ? (
           <Card style={styles.card}>
             <Text variant="title">{user?.email ?? "Аккаунт подключён"}</Text>
@@ -63,7 +69,22 @@ export default function MoreScreen() {
             <GoogleSignInCard />
           </Card>
         )}
-      </View>
+
+        {/* Правовая информация (roadmap §8) — постоянно доступна, не только
+            на онбординге: дисклеймер, честная точность, раскрытие ИИ. */}
+        <Card style={styles.card}>
+          <Text variant="title">Правовая информация</Text>
+          <Text variant="body" color={colors.textSecondary}>
+            {LEGAL_DISCLAIMER_FULL}
+          </Text>
+          <Text variant="body" color={colors.textSecondary}>
+            {LEGAL_ACCURACY}
+          </Text>
+          <Text variant="body" color={colors.textSecondary}>
+            {LEGAL_AI_DISCLOSURE}
+          </Text>
+        </Card>
+      </ScrollView>
     </View>
   );
 }
@@ -71,7 +92,11 @@ export default function MoreScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1 },
   header: { paddingHorizontal: spacing.lg, paddingVertical: spacing.md },
-  content: { paddingHorizontal: spacing.lg, gap: spacing.md },
+  content: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.xxl,
+    gap: spacing.md,
+  },
   card: { gap: spacing.sm },
   signOutButton: {
     width: "auto",
