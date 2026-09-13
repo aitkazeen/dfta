@@ -50,7 +50,10 @@ export async function sendPush(
       // Expo недоступен после всех ретраев — вся пачка не долетела.
       // Не глушим молча: логируем и пишем failed для каждого job'а, чтобы
       // notification_log отражал реальность, а не тишину.
-      console.error(`[push] chunk of ${chunk.length} failed:`, (err as Error).message);
+      console.error(
+        `[push] chunk of ${chunk.length} failed:`,
+        (err as Error).message,
+      );
       for (const job of chunk) {
         await db.notificationLog.create({
           data: {
@@ -77,7 +80,10 @@ export async function sendPush(
         },
       });
 
-      if (ticket?.status === "error" && ticket.details?.error === "DeviceNotRegistered") {
+      if (
+        ticket?.status === "error" &&
+        ticket.details?.error === "DeviceNotRegistered"
+      ) {
         // Мёртвый токен — Expo больше не сможет в него доставить, чистим,
         // чтобы не слать вхолостую на каждом следующем прогоне.
         await db.deviceToken.deleteMany({ where: { token: job.deviceToken } });

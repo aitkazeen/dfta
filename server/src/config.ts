@@ -23,6 +23,6 @@ export const httpConfig = {
   push: {
     timeoutMs: 10_000,
     retries: 1,
-    limit: 100
-  }
+    limit: 100,
+  },
 } as const;
