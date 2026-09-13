@@ -132,5 +132,23 @@ export function authRoutes(deps: AuthRoutesDeps) {
         return { id: device.id };
       },
     );
+
+    // Удаление аккаунта — требование App Store (5.1.1(v)) и Google Play для
+    // приложений с регистрацией. FK-каскада в схеме нет, поэтому удаляем детей
+    // явно и в транзакции, чтобы не осталось «висящих» строк при частичном сбое.
+    // Порядок: сначала то, что ссылается на другие строки пользователя
+    // (notification_log ссылается и на user, и на alert_rule), затем остальное.
+    // Refresh-токены stateless (JWT) — отдельно чистить нечего: после удаления
+    // /v1/auth/refresh не найдёт пользователя и вернёт 401.
+    app.delete("/v1/me", { preHandler: requireAuth }, async (req, reply) => {
+      const userId = req.userId!;
+      await deps.db.$transaction([
+        deps.db.notificationLog.deleteMany({ where: { userId } }),
+        deps.db.alertRule.deleteMany({ where: { userId } }),
+        deps.db.deviceToken.deleteMany({ where: { userId } }),
+        deps.db.appUser.deleteMany({ where: { id: userId } }),
+      ]);
+      return reply.code(204).send();
+    });
   };
 }

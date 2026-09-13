@@ -3,6 +3,7 @@ import { create } from "zustand";
 import * as SecureStore from "expo-secure-store";
 import {
   ApiError,
+  deleteAccount,
   refreshTokens,
   signInWithApple,
   signInWithGoogle,
@@ -59,6 +60,9 @@ type AuthState = {
   signInWithAppleToken: (identityToken: string) => Promise<void>;
   signInWithGoogleToken: (idToken: string) => Promise<void>;
   signOut: () => Promise<void>;
+  /** Удаляет аккаунт на бэкенде и разлогинивает. Бросает, если запрос не
+   *  прошёл, — токены при этом НЕ чистим (аккаунт не удалён). */
+  deleteAccount: () => Promise<void>;
 
   /**
    * Обёртка для одного защищённого запроса: подставляет текущий access,
@@ -124,6 +128,20 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   signOut: async () => {
+    await clearTokens();
+    set({
+      status: "signedOut",
+      accessToken: null,
+      refreshToken: null,
+      user: null,
+    });
+  },
+
+  deleteAccount: async () => {
+    // callAuthorized сам подставит access и при 401 обновит его один раз.
+    // Если запрос упадёт — пробрасываем ошибку и НЕ трогаем токены: аккаунт
+    // на сервере не удалён, ложного «разлогина» быть не должно.
+    await get().callAuthorized((accessToken) => deleteAccount(accessToken));
     await clearTokens();
     set({
       status: "signedOut",

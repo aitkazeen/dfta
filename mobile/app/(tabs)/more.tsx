@@ -1,9 +1,11 @@
-import { ScrollView, StyleSheet, View } from "react-native";
+import { useState } from "react";
+import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { spacing, useTheme } from "../../src/theme";
+import { radius, spacing, useTheme } from "../../src/theme";
 import {
   Text,
   Card,
+  ConfirmDialog,
   IconButton,
   AppleSignInCard,
   GoogleSignInCard,
@@ -26,6 +28,25 @@ export default function MoreScreen() {
   const status = useAuthStore((s) => s.status);
   const user = useAuthStore((s) => s.user);
   const signOut = useAuthStore((s) => s.signOut);
+  const deleteAccount = useAuthStore((s) => s.deleteAccount);
+  const [confirmVisible, setConfirmVisible] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  async function handleConfirmDelete() {
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      // При успехе статус станет signedOut и _layout сам покажет login —
+      // этот экран размонтируется, сбрасывать состояние не нужно.
+      await deleteAccount();
+    } catch (err) {
+      console.error("[account] не удалось удалить аккаунт", err);
+      setDeleting(false);
+      setConfirmVisible(false);
+      setDeleteError("Не удалось удалить аккаунт. Попробуйте позже.");
+    }
+  }
 
   return (
     <View
@@ -84,7 +105,46 @@ export default function MoreScreen() {
             {LEGAL_AI_DISCLOSURE}
           </Text>
         </Card>
+
+        {status === "signedIn" && (
+          <Card style={styles.card}>
+            <Text variant="title">Удаление аккаунта</Text>
+            <Text variant="body" color={colors.textSecondary}>
+              Удаляет аккаунт и все связанные данные безвозвратно.
+            </Text>
+            <Pressable
+              onPress={() => setConfirmVisible(true)}
+              disabled={deleting}
+              accessibilityRole="button"
+              accessibilityLabel="Удалить аккаунт"
+              style={[
+                styles.deleteButton,
+                { borderColor: colors.down, opacity: deleting ? 0.5 : 1 },
+              ]}
+            >
+              <Text variant="label" color={colors.down}>
+                {deleting ? "Удаляем…" : "Удалить аккаунт"}
+              </Text>
+            </Pressable>
+            {deleteError && (
+              <Text variant="label" color={colors.down}>
+                {deleteError}
+              </Text>
+            )}
+          </Card>
+        )}
       </ScrollView>
+
+      <ConfirmDialog
+        visible={confirmVisible}
+        title="Удалить аккаунт?"
+        message="Аккаунт и все связанные данные (правила уведомлений, история) будут удалены безвозвратно."
+        confirmLabel="Удалить"
+        destructive
+        loading={deleting}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setConfirmVisible(false)}
+      />
     </View>
   );
 }
@@ -105,6 +165,14 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     borderRadius: 12,
     alignSelf: "flex-start",
+    marginTop: spacing.sm,
+  },
+  deleteButton: {
+    alignSelf: "flex-start",
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.md,
+    borderWidth: 1,
     marginTop: spacing.sm,
   },
 });

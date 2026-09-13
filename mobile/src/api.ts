@@ -194,6 +194,18 @@ export function registerDevice(
   return post("/v1/me/devices", { token: deviceToken, platform }, accessToken);
 }
 
+/** Удаление аккаунта и всех связанных данных (App Store 5.1.1(v) / Google
+ *  Play). Бэкенд отдаёт 204 без тела — не гоняем через request(). */
+export async function deleteAccount(accessToken: string): Promise<void> {
+  const res = await fetch(`${API_URL}/v1/me`, {
+    method: "DELETE",
+    headers: authHeader(accessToken),
+  });
+  if (!res.ok) {
+    throw new ApiError(res.status, `${res.status} ${res.statusText}`);
+  }
+}
+
 // --- Алерты (этап 5, см. server/src/modules/notifications/routes.ts) ---
 
 /** 4 типа триггеров из roadmap §7. Форма params зависит от type — см.

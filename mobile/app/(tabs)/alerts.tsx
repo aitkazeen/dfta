@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import {
-  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -22,7 +21,7 @@ import {
   type QuietHours,
 } from "../../src/api";
 import { useAuthStore } from "../../src/store/auth";
-import { Card, Text } from "../../src/components";
+import { Card, ConfirmDialog, Text } from "../../src/components";
 
 /**
  * Алерты (этап 5, roadmap §7) — CRUD правил уведомлений поверх
@@ -81,6 +80,8 @@ export default function AlertsScreen() {
   const [pairs, setPairs] = useState<ApiPair[]>([]);
   const [rules, setRules] = useState<ApiAlertRule[]>([]);
   const [loading, setLoading] = useState(true);
+  const [ruleToDelete, setRuleToDelete] = useState<ApiAlertRule | null>(null);
+  const [deletingRule, setDeletingRule] = useState(false);
 
   // --- Черновик нового правила ---
   const [pairId, setPairId] = useState<string | null>(null);
@@ -205,22 +206,18 @@ export default function AlertsScreen() {
     }
   }
 
-  function confirmDelete(rule: ApiAlertRule) {
-    Alert.alert("Удалить правило?", describeRule(rule), [
-      { text: "Отмена", style: "cancel" },
-      {
-        text: "Удалить",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            await callAuthorized((t) => deleteAlert(t, rule.id));
-            setRules((prev) => prev.filter((r) => r.id !== rule.id));
-          } catch (err) {
-            console.error("[alerts] не удалось удалить правило", err);
-          }
-        },
-      },
-    ]);
+  async function handleConfirmDelete() {
+    if (!ruleToDelete) return;
+    setDeletingRule(true);
+    try {
+      await callAuthorized((t) => deleteAlert(t, ruleToDelete.id));
+      setRules((prev) => prev.filter((r) => r.id !== ruleToDelete.id));
+      setRuleToDelete(null);
+    } catch (err) {
+      console.error("[alerts] не удалось удалить правило", err);
+    } finally {
+      setDeletingRule(false);
+    }
   }
 
   return (
@@ -307,7 +304,7 @@ export default function AlertsScreen() {
                       }}
                     />
                     <Pressable
-                      onPress={() => confirmDelete(rule)}
+                      onPress={() => setRuleToDelete(rule)}
                       accessibilityRole="button"
                       accessibilityLabel="Удалить правило"
                       hitSlop={8}
@@ -463,6 +460,17 @@ export default function AlertsScreen() {
           </>
         )}
       </ScrollView>
+
+      <ConfirmDialog
+        visible={ruleToDelete !== null}
+        title="Удалить правило?"
+        message={ruleToDelete ? describeRule(ruleToDelete) : undefined}
+        confirmLabel="Удалить"
+        destructive
+        loading={deletingRule}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setRuleToDelete(null)}
+      />
     </View>
   );
 }

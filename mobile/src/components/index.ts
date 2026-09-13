@@ -1,5 +1,6 @@
 export { Text } from "./Text";
 export { Card } from "./Card";
+export { ConfirmDialog } from "./ConfirmDialog";
 export { IconButton } from "./IconButton";
 export { AppleSignInCard } from "./AppleSignInCard";
 export { GoogleSignInCard } from "./GoogleSignInCard";
