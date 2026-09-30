@@ -18,6 +18,11 @@ export type ForecastInput = {
   // Не опционально — воркер всегда считает его через news/repository.ts
   // getNewsScore (0, если новостей за окно не было), см. roadmap §5.3.
   newsScore: number;
+  // Экзогенные фичи (Brent, кросс-курсы, макро) — опционально, чтобы новые
+  // сигналы текли в MlForecastEngine без ломки интерфейса и RulesForecastEngine.
+  // Ключи — имена фич (напр. "brent_level", "brent_ret5d"); RulesForecastEngine
+  // их игнорирует, MlForecastEngine читает те, что перечислены в его модели.
+  exogenous?: Record<string, number>;
 };
 
 export type ForecastResult = {
