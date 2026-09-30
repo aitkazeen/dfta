@@ -47,6 +47,10 @@ export function forecastRoutes(deps: ForecastRoutesDeps) {
     });
     app.get("/v1/pairs/:id/forecast/history", async (req, reply) => {
       const { id } = req.params as { id: string };
+      // Тот же whitelist + дефолт 24h, что у /forecast — иначе под табом "7д"
+      // точность/тренд оставались бы 24-часовыми (рассинхрон с направлением).
+      const { horizon: rawHorizon } = req.query as { horizon?: string };
+      const horizon = rawHorizon === "7d" ? "7d" : "24h";
 
       const pair = await deps.db.currencyPair.findUnique({ where: { id } });
       if (!pair) {
@@ -56,7 +60,7 @@ export function forecastRoutes(deps: ForecastRoutesDeps) {
       const forecasts = await deps.db.forecast.findMany({
         where: {
           pairId: id,
-          horizon: "24h",
+          horizon,
           createdAt: {
             gte: new Date(
               Date.now() - forecastConfig.historyWindowDays * 86_400_000,
@@ -96,7 +100,7 @@ export function forecastRoutes(deps: ForecastRoutesDeps) {
 
       return {
         pairId: id,
-        horizon: "24h",
+        horizon,
         windowDays: forecastConfig.historyWindowDays,
         total,
         hitRatePct,

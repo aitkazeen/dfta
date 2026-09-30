@@ -76,7 +76,7 @@ export default function FullForecastScreen() {
     Promise.all([
       getQuote(id),
       getForecast(id, HORIZON_API[horizon]).catch(() => null),
-      getForecastHistory(id).catch(() => null),
+      getForecastHistory(id, HORIZON_API[horizon]).catch(() => null),
     ])
       .then(([quote, api, history]) => {
         if (cancelled) return;

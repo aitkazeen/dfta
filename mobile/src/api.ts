@@ -154,8 +154,13 @@ export function getForecast(
   return api<ApiForecast>(`/v1/pairs/${id}/forecast?horizon=${horizon}`);
 }
 
-export function getForecastHistory(id: string): Promise<ApiForecastHistory> {
-  return api<ApiForecastHistory>(`/v1/pairs/${id}/forecast/history`);
+export function getForecastHistory(
+  id: string,
+  horizon: "24h" | "7d" = "24h",
+): Promise<ApiForecastHistory> {
+  return api<ApiForecastHistory>(
+    `/v1/pairs/${id}/forecast/history?horizon=${horizon}`,
+  );
 }
 
 export function getNews(id: string, limit = 20): Promise<ApiNewsArticle[]> {

@@ -15,9 +15,8 @@ type Props = {
 // правее — прогнозный конус до VIEW_W.
 const VIEW_W = 340;
 const VIEW_H = 220;
-const STEP = 14; // шаг между свечами
-const BODY_W = 10; // ширина тела свечи
 const CONE_X = 260; // где кончается история и начинается прогноз
+const MAX_BODY_W = 10; // максимальная ширина тела свечи
 
 /**
  * Свечной график с прогнозным конусом. Конус расширяется к правому краю
@@ -26,7 +25,8 @@ const CONE_X = 260; // где кончается история и начина�
  *
  * По Y домен считается из самих данных (свечи + прогноз) с небольшим полем,
  * поэтому график корректно масштабируется под любые реальные значения.
- * По X геометрия фиксирована под ~18 свечей, как в макете.
+ * По X шаг между свечами выводится из их числа, так что история занимает
+ * [0, CONE_X] при любом количестве свечей (см. step ниже).
  */
 export function CandleChart({ candles, forecast }: Props) {
   const { colors } = useTheme();
@@ -41,6 +41,13 @@ export function CandleChart({ candles, forecast }: Props) {
   const maxY = rawMax + pad;
 
   const scaleY = (price: number) => ((maxY - price) / (maxY - minY)) * VIEW_H;
+
+  // Шаг выводим из числа свечей, чтобы история всегда занимала [0, CONE_X]
+  // независимо от того, сколько свечей пришло с бэкенда (getCandles(id, 30)).
+  // С фиксированным STEP=14 30 свечей вылезали за viewBox (30*14=420 > 340) и
+  // за границу "сейчас", а конус отрывался от последней свечи.
+  const step = candles.length > 1 ? CONE_X / candles.length : CONE_X;
+  const bodyW = Math.min(MAX_BODY_W, step * 0.72);
 
   const last = candles[candles.length - 1];
   const lastCloseY = scaleY(last.c);
@@ -57,8 +64,8 @@ export function CandleChart({ candles, forecast }: Props) {
     >
       <Svg width="100%" height={VIEW_H} viewBox={`0 0 ${VIEW_W} ${VIEW_H}`}>
         {candles.map((cd, i) => {
-          const x = i * STEP;
-          const cx = x + BODY_W / 2;
+          const x = i * step;
+          const cx = x + bodyW / 2;
           // НБ РК даёт один фиксинг в день, поэтому o===h===l===c внутри
           // каждой свечи (нет реального внутридневного диапазона) — тело
           // "open→close этого же дня" всегда было бы нулевым. Вместо этого
@@ -72,7 +79,6 @@ export function CandleChart({ candles, forecast }: Props) {
 
           const bodyY = Math.min(yPrevClose, yClose);
           const bodyH = Math.max(1.5, Math.abs(yClose - yPrevClose));
-          console.log(cd);
           return (
             <Fragment key={i}>
               <Line
@@ -86,7 +92,7 @@ export function CandleChart({ candles, forecast }: Props) {
               <Rect
                 x={x}
                 y={bodyY}
-                width={BODY_W}
+                width={bodyW}
                 height={bodyH}
                 rx={1.5}
                 fill={color}
