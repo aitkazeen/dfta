@@ -1,5 +1,5 @@
 /**
- * Справочники MVP: 4 валюты + ровно 3 одобренных пары (§1 CLAUDE.md —
+ * Справочники MVP: 5 валют + 4 одобренных пары (§1 CLAUDE.md —
  * KZT центральная, только X/KZT). Идемпотентно — upsert, безопасно
  * перезапускать.
  *
@@ -13,6 +13,7 @@ const currencies = [
   { code: "USD", name: "US Dollar", symbol: "$" },
   { code: "EUR", name: "Euro", symbol: "€" },
   { code: "RUB", name: "Russian Ruble", symbol: "₽" },
+  { code: "CNY", name: "Chinese Yuan", symbol: "¥" },
   { code: "KZT", name: "Kazakhstani Tenge", symbol: "₸" },
 ];
 
@@ -37,6 +38,13 @@ const pairs = [
     quoteCode: "KZT",
     displayName: "RUB/KZT",
     priority: 3,
+  },
+  {
+    id: "CNY-KZT",
+    baseCode: "CNY",
+    quoteCode: "KZT",
+    displayName: "CNY/KZT",
+    priority: 4,
   },
 ];
 

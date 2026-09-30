@@ -5,6 +5,7 @@ const FLAG: Record<string, string> = {
   USD: "🇺🇸",
   EUR: "🇪🇺",
   RUB: "🇷🇺",
+  CNY: "🇨🇳",
   KZT: "🇰🇿",
 };
 

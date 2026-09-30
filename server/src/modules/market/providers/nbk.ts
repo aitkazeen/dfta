@@ -6,7 +6,7 @@ import {
   type Quote,
 } from "../types.js";
 
-const SUPPORTED_BASES = new Set(["USD", "EUR", "RUB"]);
+const SUPPORTED_BASES = new Set(["USD", "EUR", "RUB", "CNY"]);
 
 function toRuDate(date: Date): string {
   const dd = String(date.getUTCDate()).padStart(2, "0");

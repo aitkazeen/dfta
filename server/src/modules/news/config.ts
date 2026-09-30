@@ -18,6 +18,8 @@ export const newsConfig = {
     USD: ["доллар", "usd"],
     EUR: ["евро", "еуро", "eur"],
     RUB: ["рубль", "рубл", "rub"],
+    // Казахское написание "юань" совпадает с русским (как теңге/рубль).
+    CNY: ["юань", "cny", "юань"],
   } as Record<string, string[]>,
   deduplicated: {
     period: 4 * 60 * 60 * 1000,
