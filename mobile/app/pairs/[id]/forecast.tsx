@@ -29,6 +29,11 @@ const HORIZON_LABEL: Record<ForecastHorizon, string> = {
   "24ч": "24 часа",
   "7д": "7 дней",
 };
+// UI-горизонт → значение API (?horizon=), которое ждёт бэкенд.
+const HORIZON_API: Record<ForecastHorizon, "24h" | "7d"> = {
+  "24ч": "24h",
+  "7д": "7d",
+};
 
 /**
  * Полный прогноз (4.4) — детализация ForecastCard с экрана пары: объяснение
@@ -62,13 +67,15 @@ export default function FullForecastScreen() {
     trend: { predicted: [], actual: [] },
   });
 
+  const [horizon, setHorizon] = useState<ForecastHorizon>("24ч");
+
   useEffect(() => {
     if (!id) return;
     let cancelled = false;
 
     Promise.all([
       getQuote(id),
-      getForecast(id).catch(() => null),
+      getForecast(id, HORIZON_API[horizon]).catch(() => null),
       getForecastHistory(id).catch(() => null),
     ])
       .then(([quote, api, history]) => {
@@ -109,9 +116,8 @@ export default function FullForecastScreen() {
     return () => {
       cancelled = true;
     };
-  }, [id]);
+  }, [id, horizon]);
 
-  const [horizon, setHorizon] = useState<ForecastHorizon>("24ч");
   const [confidenceOpen, setConfidenceOpen] = useState(false);
 
   return (

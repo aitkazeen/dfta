@@ -147,8 +147,11 @@ export function getIndicators(id: string): Promise<ApiIndicators> {
 
 /** 404, пока воркер не сгенерировал первый прогноз для пары — это ожидаемо,
  *  не ошибка; вызывающая сторона сама решает, чем заполнить состояние. */
-export function getForecast(id: string): Promise<ApiForecast> {
-  return api<ApiForecast>(`/v1/pairs/${id}/forecast`);
+export function getForecast(
+  id: string,
+  horizon: "24h" | "7d" = "24h",
+): Promise<ApiForecast> {
+  return api<ApiForecast>(`/v1/pairs/${id}/forecast?horizon=${horizon}`);
 }
 
 export function getForecastHistory(id: string): Promise<ApiForecastHistory> {

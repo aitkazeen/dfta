@@ -274,59 +274,65 @@ async function maybeGenerateForecast(
 
   const indicators = await getLatestIndicators(db, pair.id);
   const newsScore = await getNewsScore(db, pair.id);
-  const result = await forecastEngine.predict({
-    pairId: pair.id,
-    horizon: "24h",
-    close,
-    indicators,
-    newsScore,
-  });
 
-  // Без ATR прогноз вырожденный (flat/0, см. RulesForecastEngine) — объяснять
-  // там нечего, и не стоит платить за LLM-вызов ради "нет данных".
-  const explained =
-    indicators.atr14 === undefined
-      ? null
-      : await explainer
-          .explain({
-            base: pair.baseCode,
-            quote: pair.quoteCode,
-            direction: result.direction,
-            technicalScore: (result.features as { technicalScore: number })
-              .technicalScore,
-            close,
-            targetLow: result.targetLow,
-            targetHigh: result.targetHigh,
-            indicators,
-          })
-          .catch((err: Error) => {
-            console.error(
-              `[worker] explainer для ${pair.id} упал:`,
-              err.message,
-            );
-            return null;
-          });
-
-  await db.forecast.create({
-    data: {
+  // Оба горизонта: у каждого своя калиброванная confidence и свой target-range
+  // (predict() учитывает horizon). Раньше слался только "24h" — 7д-калибровка
+  // и 7д-таб в приложении оставались без данных.
+  for (const horizon of ["24h", "7d"] as const) {
+    const result = await forecastEngine.predict({
       pairId: pair.id,
-      horizon: "24h",
-      direction: result.direction,
-      confidence: result.confidence,
-      targetLow: result.targetLow,
-      targetHigh: result.targetHigh,
-      engineVersion: result.engineVersion,
-      // Prisma не принимает Record<string, unknown> напрямую как JSON-инпут —
-      // ForecastResult.features сознательно типизирован без зависимости на
-      // Prisma (ForecastEngine не должен знать о хранилище), поэтому приводим
-      // тип здесь, на границе записи в БД, а не в domain-типе.
-      features: result.features as Prisma.InputJsonValue,
-      explanation: explained?.explanation,
-      ...(explained
-        ? { drivers: explained.drivers as Prisma.InputJsonValue }
-        : {}),
-    },
-  });
+      horizon,
+      close,
+      indicators,
+      newsScore,
+    });
+
+    // Без ATR прогноз вырожденный (flat/0, см. RulesForecastEngine) — объяснять
+    // там нечего, и не стоит платить за LLM-вызов ради "нет данных".
+    const explained =
+      indicators.atr14 === undefined
+        ? null
+        : await explainer
+            .explain({
+              base: pair.baseCode,
+              quote: pair.quoteCode,
+              direction: result.direction,
+              technicalScore: (result.features as { technicalScore: number })
+                .technicalScore,
+              close,
+              targetLow: result.targetLow,
+              targetHigh: result.targetHigh,
+              indicators,
+            })
+            .catch((err: Error) => {
+              console.error(
+                `[worker] explainer для ${pair.id} (${horizon}) упал:`,
+                err.message,
+              );
+              return null;
+            });
+
+    await db.forecast.create({
+      data: {
+        pairId: pair.id,
+        horizon,
+        direction: result.direction,
+        confidence: result.confidence,
+        targetLow: result.targetLow,
+        targetHigh: result.targetHigh,
+        engineVersion: result.engineVersion,
+        // Prisma не принимает Record<string, unknown> напрямую как JSON-инпут —
+        // ForecastResult.features сознательно типизирован без зависимости на
+        // Prisma (ForecastEngine не должен знать о хранилище), поэтому приводим
+        // тип здесь, на границе записи в БД, а не в domain-типе.
+        features: result.features as Prisma.InputJsonValue,
+        explanation: explained?.explanation,
+        ...(explained
+          ? { drivers: explained.drivers as Prisma.InputJsonValue }
+          : {}),
+      },
+    });
+  }
 }
 
 const worker = new Worker(QUEUE_NAME, () => pollAllPairs(), { connection });

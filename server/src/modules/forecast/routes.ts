@@ -10,6 +10,11 @@ export function forecastRoutes(deps: ForecastRoutesDeps) {
   return async function (app: FastifyInstance) {
     app.get("/v1/pairs/:id/forecast", async (req, reply) => {
       const { id } = req.params as { id: string };
+      // Воркер пишет оба горизонта; без фильтра findFirst отдавал бы случайный
+      // из двух (у них близкий createdAt). Whitelist + дефолт 24h — старые
+      // клиенты без ?horizon= продолжают получать 24h, как раньше.
+      const { horizon: rawHorizon } = req.query as { horizon?: string };
+      const horizon = rawHorizon === "7d" ? "7d" : "24h";
 
       const pair = await deps.db.currencyPair.findUnique({ where: { id } });
       if (!pair) {
@@ -17,7 +22,7 @@ export function forecastRoutes(deps: ForecastRoutesDeps) {
       }
 
       const forecast = await deps.db.forecast.findFirst({
-        where: { pairId: id },
+        where: { pairId: id, horizon },
         orderBy: { createdAt: "desc" },
       });
       if (!forecast) {
