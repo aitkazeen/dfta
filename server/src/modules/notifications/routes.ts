@@ -128,5 +128,27 @@ export function notificationRoutes(deps: NotificationRoutesDeps) {
         return reply.code(204).send();
       },
     );
+
+    // Клиент зовёт это при тапе по пушу (deep link из data.logId) — так
+    // notification_log.status становится 'opened' и считается open rate по
+    // типам (roadmap §7). Скоуп by userId: чужой лог даёт 404, не 403.
+    app.post(
+      "/v1/me/notifications/:id/opened",
+      { preHandler: requireAuth },
+      async (req, reply) => {
+        const { id } = req.params as { id: string };
+        const log = await deps.db.notificationLog.findFirst({
+          where: { id, userId: req.userId! },
+        });
+        if (!log) {
+          return reply.code(404).send({ error: "notification not found" });
+        }
+        await deps.db.notificationLog.update({
+          where: { id },
+          data: { status: "opened" },
+        });
+        return reply.code(204).send();
+      },
+    );
   };
 }

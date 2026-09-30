@@ -22,6 +22,23 @@ export async function sendPush(
   for (let i = 0; i < jobs.length; i += httpConfig.push.limit) {
     const chunk = jobs.slice(i, i + httpConfig.push.limit);
 
+    // Лог создаём ДО отправки, чтобы его id уехал в data пуша — иначе клиент,
+    // получив тап, не сможет привязать open к конкретной отправке (open rate).
+    // Статус ставим "sent" оптимистично и понижаем до "failed" ниже, если
+    // Expo вернёт ошибку или пачка не долетит вовсе.
+    const logs = await Promise.all(
+      chunk.map((job) =>
+        db.notificationLog.create({
+          data: {
+            userId: job.userId,
+            ruleId: job.ruleId,
+            payload: job.payload as Prisma.InputJsonValue,
+            status: "sent",
+          },
+        }),
+      ),
+    );
+
     let tickets: ExpoPushTicket[];
     try {
       const response = await fetchWithRetry(
@@ -33,11 +50,11 @@ export async function sendPush(
             accept: "application/json",
           },
           body: JSON.stringify(
-            chunk.map((job) => ({
+            chunk.map((job, j) => ({
               to: job.deviceToken,
               title: job.payload.title,
               body: job.payload.body,
-              data: job.payload.data,
+              data: { ...job.payload.data, logId: logs[j].id },
               sound: "default",
             })),
           ),
@@ -48,36 +65,26 @@ export async function sendPush(
       tickets = parsed.data;
     } catch (err) {
       // Expo недоступен после всех ретраев — вся пачка не долетела.
-      // Не глушим молча: логируем и пишем failed для каждого job'а, чтобы
+      // Не глушим молча: логируем и понижаем всю пачку до failed, чтобы
       // notification_log отражал реальность, а не тишину.
       console.error(
         `[push] chunk of ${chunk.length} failed:`,
         (err as Error).message,
       );
-      for (const job of chunk) {
-        await db.notificationLog.create({
-          data: {
-            userId: job.userId,
-            ruleId: job.ruleId,
-            payload: job.payload as Prisma.InputJsonValue,
-            status: "failed",
-          },
-        });
-      }
+      await db.notificationLog.updateMany({
+        where: { id: { in: logs.map((log) => log.id) } },
+        data: { status: "failed" },
+      });
       continue;
     }
 
     for (let j = 0; j < chunk.length; j++) {
-      const job = chunk[j];
       const ticket = tickets[j];
+      if (ticket?.status === "ok") continue;
 
-      await db.notificationLog.create({
-        data: {
-          userId: job.userId,
-          ruleId: job.ruleId,
-          payload: job.payload as Prisma.InputJsonValue,
-          status: ticket?.status === "ok" ? "sent" : "failed",
-        },
+      await db.notificationLog.update({
+        where: { id: logs[j].id },
+        data: { status: "failed" },
       });
 
       if (
@@ -86,7 +93,9 @@ export async function sendPush(
       ) {
         // Мёртвый токен — Expo больше не сможет в него доставить, чистим,
         // чтобы не слать вхолостую на каждом следующем прогоне.
-        await db.deviceToken.deleteMany({ where: { token: job.deviceToken } });
+        await db.deviceToken.deleteMany({
+          where: { token: chunk[j].deviceToken },
+        });
       }
     }
   }

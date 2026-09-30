@@ -5,6 +5,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import * as Notifications from "expo-notifications";
 import * as SplashScreen from "expo-splash-screen";
 import { syncPushToken } from "../src/lib/push";
+import { markNotificationOpened } from "../src/api";
 import {
   Inter_400Regular,
   Inter_500Medium,
@@ -52,14 +53,25 @@ export default function RootLayout() {
     if (authStatus === "signedIn") void syncPushToken();
   }, [authStatus]);
 
-  // Тап по уведомлению открывает экран пары. pairId кладёт бэкенд в data
-  // (см. notifications/evaluate.ts:buildPayload).
+  // Тап по уведомлению открывает экран пары и помечает пуш открытым (open
+  // rate). pairId/logId кладёт бэкенд в data (см. notifications/push.ts,
+  // evaluate.ts:buildPayload).
   useEffect(() => {
     const sub = Notifications.addNotificationResponseReceivedListener(
       (response) => {
         const data = response.notification.request.content.data as {
           pairId?: string;
+          logId?: string;
         };
+        if (data?.logId) {
+          // Best-effort: неудача не должна мешать открыть экран.
+          void useAuthStore
+            .getState()
+            .callAuthorized((token) =>
+              markNotificationOpened(token, data.logId!),
+            )
+            .catch(() => {});
+        }
         if (data?.pairId) {
           router.push({
             pathname: "/pairs/[id]",

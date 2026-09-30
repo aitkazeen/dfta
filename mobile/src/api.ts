@@ -270,6 +270,21 @@ export function updateAlert(
   });
 }
 
+/** Отметить пуш открытым (тап по уведомлению). logId кладёт бэкенд в data
+ *  пуша (см. notifications/push.ts). 204 без тела — не через request(). */
+export async function markNotificationOpened(
+  accessToken: string,
+  logId: string,
+): Promise<void> {
+  const res = await fetch(`${API_URL}/v1/me/notifications/${logId}/opened`, {
+    method: "POST",
+    headers: authHeader(accessToken),
+  });
+  if (!res.ok) {
+    throw new ApiError(res.status, `${res.status} ${res.statusText}`);
+  }
+}
+
 /** DELETE отдаёт 204 без тела — не гоняем через request(), тот всегда
  *  делает res.json() и упал бы на пустом ответе. */
 export async function deleteAlert(
